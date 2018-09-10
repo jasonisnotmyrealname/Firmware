@@ -64,13 +64,17 @@ all: posix_sitl_default
 # assume 1st argument passed is the main target, the
 # rest are arguments to pass to the makefile generated
 # by cmake in the subdirectory
-FIRST_ARG := $(firstword $(MAKECMDGOALS))
-ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
-j ?= 4
+FIRST_ARG := $(firstword $(MAKECMDGOALS))  #MAKECMDGOALS是一个特殊变量，为命令行传进来的参数，值为make后面的字符串。firstword取后面参数中的第一个字符串
+ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) # $(words <text>)统计单词个数; wordlist <s>,<e>,<text>: 从字符串<text>中取从<s>开始到<e>的单词串. <s>和<e>是一个数字. 本条指令就是提取第1个参数后面的参数
 
-NINJA_BIN := ninja
+
+j ?= 4  # '?='表示:如果j没有赋值过， 那就赋值。 如果赋值过， 那本次就不赋值了。
+
+
+#用NINJA来代替make执行编译
+NINJA_BIN := ninja  # ':='表示赋值
 ifndef NO_NINJA_BUILD
-	NINJA_BUILD := $(shell $(NINJA_BIN) --version 2>/dev/null)
+	NINJA_BUILD := $(shell $(NINJA_BIN) --version 2>/dev/null) #$(shell <shell command>)它的作用就是执行一个shell命令
 
 	ifndef NINJA_BUILD
 		NINJA_BIN := ninja-build
@@ -98,7 +102,7 @@ else
 	PX4_MAKE_ARGS = -j$(j) --no-print-directory
 endif
 
-SRC_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+SRC_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))  #dirname命令:找到上层目录. realpath:返回目录的绝对路径
 
 # check if replay env variable is set & set build dir accordingly
 ifdef replay
