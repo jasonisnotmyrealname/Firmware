@@ -57,7 +57,7 @@ endif
 # in that directory with the target upload.
 
 #  explicity set default build target
-all: posix_sitl_default
+all: posix_sitl_default  #all是object，posix_sitl_default是依赖项
 
 # Parsing
 # --------------------------------------------------------------------
@@ -68,7 +68,7 @@ FIRST_ARG := $(firstword $(MAKECMDGOALS))  #MAKECMDGOALS是一个特殊变量，
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) # $(words <text>)统计单词个数; wordlist <s>,<e>,<text>: 从字符串<text>中取从<s>开始到<e>的单词串. <s>和<e>是一个数字. 本条指令就是提取第1个参数后面的参数
 
 
-j ?= 4  # '?='表示:如果j没有赋值过， 那就赋值。 如果赋值过， 那本次就不赋值了。
+j ?= 4  # '?='表示:如果j没有赋值过， 那就赋值。 如果赋值过(比如说执行make -j4)， 那本次就不赋值了。
 
 
 #用NINJA来代替make执行编译
@@ -124,11 +124,11 @@ endif
 # --------------------------------------------------------------------
 # describe how to build a cmake config
 define cmake-build
-+@$(eval PX4_CONFIG = $(1))
++@$(eval PX4_CONFIG = $(1))  #$(1)表示调用cmake-build的第一个参数，是某个.cmake的文件名
 +@$(eval BUILD_DIR = $(SRC_DIR)/build/$(PX4_CONFIG)$(BUILD_DIR_SUFFIX))
 +@if [ $(PX4_CMAKE_GENERATOR) = "Ninja" ] && [ -e $(BUILD_DIR)/Makefile ]; then rm -rf $(BUILD_DIR); fi
 +@if [ ! -e $(BUILD_DIR)/CMakeCache.txt ]; then mkdir -p $(BUILD_DIR) && cd $(BUILD_DIR) && cmake $(SRC_DIR) -G"$(PX4_CMAKE_GENERATOR)" $(CMAKE_ARGS) -DCONFIG=$(PX4_CONFIG) || (rm -rf $(BUILD_DIR)); fi
-+@$(PX4_MAKE) -C $(BUILD_DIR) $(PX4_MAKE_ARGS) $(ARGS)
++@$(PX4_MAKE) -C $(BUILD_DIR) $(PX4_MAKE_ARGS) $(ARGS)   #-C表示切换到某个目录下
 endef
 
 COLOR_BLUE = \033[0;94m
