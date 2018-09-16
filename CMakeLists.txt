@@ -99,17 +99,22 @@
 #
 #=============================================================================
 
+# 注释参考https://wenku.baidu.com/view/14b07ac7bd64783e08122b05.html
+
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 
-set(PX4_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-set(PX4_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+set(PX4_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")   #如果参数中有空格，则需要用双引号"",CMAKE_CURRENT_SOURCE_DIR 内容为 source tree 根目录的完整路径，也就是 CMake 开始建置过程的进入点。
+set(PX4_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")   #内容为 binary tree 根目录的完整路径，在 in-source build 的时候值与 CMAKE_SOURCE_DIR 相同。
+#关于Out-of-source Build:在 CMake 命令列最后一项所指定的路径将被视为 source tree 根目录(out of source build?)，当其他选项缺省时此目录为必要参数。若命令列没有给定路径 CMake 才会将目前工作资料夹当成 source tree 根目录(in source build?)。 source tree 根目录必须含有 CMakeLists.txt ，否则会发生错误。
 
-list(APPEND CMAKE_MODULE_PATH "${PX4_SOURCE_DIR}/cmake")
+
+list(APPEND CMAKE_MODULE_PATH "${PX4_SOURCE_DIR}/cmake")  #CMAKE_MODULE_PATH是用户自己定义的module path. 在include()和find_package()中，cmake会优先在CMAKE_MODULE_PATH中搜索，然后再默认的cmake module路径中搜索(比如boost\CUDA之类的)
 
 #=============================================================================
 # git
 #
-include(common/px4_git)
+# include指令用来载入并运行来自于文件或模块的CMake代码
+include(common/px4_git)  #CMAKE_MODULE_PATH/common/px4_git，先在CMAKE_MODULE_PATH中查找px4_git.cmake，该文件定义了px4_add_git_submodule函数
 
 execute_process(
 	COMMAND git describe --always --tags
@@ -132,12 +137,13 @@ define_property(GLOBAL PROPERTY PX4_MODULE_PATHS
 # configuration
 #
 
-set(CONFIG "posix_sitl_default" CACHE STRING "desired configuration")
+set(CONFIG "posix_sitl_default" CACHE STRING "desired configuration")  #把变量 CONFIG 赋值为 "posix_sitl_default" ，并且被CMake GUI用来选择一个带有字符串"desired configuration"的窗口，让用户来设置
+#CACHE表示缓存变量。什么是缓存变量，缓存变量可以理解为当第一次运行cmake时，这些变量缓存到一份文件中(即编译目录下的CMakeCache.txt)。当再次运行cmake时，这些变量会直接使用缓存值，可以利用ccmake或者cmake-gui等工具来重新赋值。缓存变量在整个cmake运行过程中都可以起作用。
 
-string(REPLACE "_" ";" config_args ${CONFIG})
-list(GET config_args 0 OS)
-list(GET config_args 1 BOARD)
-list(GET config_args 2 LABEL)
+string(REPLACE "_" ";" config_args ${CONFIG}) #将变量CONFIG中的 “_”都替换为 “;”，并输出到变量 config_args 中
+list(GET config_args 0 OS) #在 config_args 中索引元素0，并将索引到的list输出到变量OS中（ # posix ）
+list(GET config_args 1 BOARD) # sitl
+list(GET config_args 2 LABEL) # default
 
 set(EXTERNAL_MODULES_LOCATION "" CACHE STRING "External modules source location")
 
@@ -145,7 +151,7 @@ if (NOT EXTERNAL_MODULES_LOCATION STREQUAL "")
 	get_filename_component(EXTERNAL_MODULES_LOCATION "${EXTERNAL_MODULES_LOCATION}" ABSOLUTE)
 endif()
 
-include(platforms/${OS}/cmake/px4_impl_os.cmake)
+include(platforms/${OS}/cmake/px4_impl_os.cmake)  #px4_impl_os.cmake定义了几个function
 include(configs/${CONFIG})
 list(APPEND CMAKE_MODULE_PATH ${PX4_SOURCE_DIR}/platforms/${OS}/cmake)
 
@@ -171,7 +177,7 @@ message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 #=============================================================================
 # project definition
 #
-project(px4 CXX C ASM)
+project(px4 CXX C ASM)  #支持CXX, C, ASM
 
 set(package-contact "px4users@googlegroups.com")
 
@@ -201,11 +207,11 @@ if (${OS} STREQUAL "posix")
 
 	# cmake testing only on posix
 	enable_testing()
-	include(CTest)
+	include(CTest)   #The “ctest” executable is the CMake test driver program.
 endif()
 
 #=============================================================================
-# require px4 module interface
+# require px4 module interface。这个set的语法...只是定义变量，不赋值吗？
 set(px4_required_interface
 	px4_os_prebuild_targets
 	px4_os_add_flags
@@ -248,7 +254,7 @@ endif()
 #
 
 # see if catkin was invoked to build this
-if (CATKIN_DEVEL_PREFIX)
+if (CATKIN_DEVEL_PREFIX)   #CATKIN是：Low-level build system macros and infrastructure for ROS.
 	message(STATUS "catkin ENABLED")
 	find_package(catkin REQUIRED)
 	if (catkin_FOUND)
@@ -258,7 +264,7 @@ if (CATKIN_DEVEL_PREFIX)
 	endif()
 endif()
 
-find_package(PythonInterp REQUIRED)
+find_package(PythonInterp REQUIRED)  #在module里面找外部库
 
 option(PYTHON_COVERAGE "Python code coverage" OFF)
 if(PYTHON_COVERAGE)
@@ -297,12 +303,12 @@ STRING(REGEX MATCH "[^\n]*" cxx_compiler_version_short ${cxx_compiler_version})
 message(STATUS "C++ compiler: ${cxx_compiler_version_short}")
 
 #=============================================================================
-# external libraries
+# external libraries   #上面没有value的变量
 #
 px4_os_prebuild_targets(OUT prebuild_targets BOARD ${BOARD})
 
 #=============================================================================
-# build flags
+# build flags  #上面没有value的变量
 #
 px4_os_add_flags(
 	BOARD ${BOARD}
@@ -314,7 +320,7 @@ px4_os_add_flags(
 	LINK_DIRS link_dirs
 	DEFINITIONS definitions)
 
-px4_join(OUT CMAKE_EXE_LINKER_FLAGS LIST "${CMAKE_EXE_LINKER_FLAGS};${exe_linker_flags}" GLUE " ")
+px4_join(OUT CMAKE_EXE_LINKER_FLAGS LIST "${CMAKE_EXE_LINKER_FLAGS};${exe_linker_flags}" GLUE " ")  #px4_join？
 px4_join(OUT CMAKE_C_FLAGS LIST "${CMAKE_C_FLAGS};${c_flags};${optimization_flags}" GLUE " ")
 px4_join(OUT CMAKE_CXX_FLAGS LIST "${CMAKE_CXX_FLAGS};${cxx_flags};${optimization_flags}" GLUE " ")
 
@@ -323,9 +329,9 @@ px4_join(OUT CMAKE_CXX_FLAGS LIST "${CMAKE_CXX_FLAGS};${cxx_flags};${optimizatio
 #
 include(common/px4_metadata)
 
-add_subdirectory(msg EXCLUDE_FROM_ALL)
+add_subdirectory(msg EXCLUDE_FROM_ALL)   #添加msg文件夹，EXCLUDE_FROM_ALL表示msg不会被编译
 
-px4_generate_airframes_xml(BOARD ${BOARD})
+px4_generate_airframes_xml(BOARD ${BOARD})  #px4_generate_airframes_xml？
 
 #=============================================================================
 # DriverFramework
@@ -382,7 +388,7 @@ add_subdirectory(src/modules/systemlib EXCLUDE_FROM_ALL) # TODO: split into libr
 add_subdirectory(src/modules/uORB EXCLUDE_FROM_ALL) # TODO: platform layer
 add_subdirectory(src/drivers/boards EXCLUDE_FROM_ALL)
 
-foreach(module ${config_module_list})
+foreach(module ${config_module_list})  #config_module_list中有变量吗？
 	add_subdirectory(src/${module})
 endforeach()
 
