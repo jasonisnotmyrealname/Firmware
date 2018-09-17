@@ -64,6 +64,8 @@ all: posix_sitl_default  #all是object，posix_sitl_default是依赖项
 # assume 1st argument passed is the main target, the
 # rest are arguments to pass to the makefile generated
 # by cmake in the subdirectory
+
+#ARGS传递给build目录下的make，比如upload/jmavsim
 FIRST_ARG := $(firstword $(MAKECMDGOALS))  #MAKECMDGOALS是一个特殊变量，为命令行传进来的参数，值为make后面的字符串。firstword取后面参数中的第一个字符串
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) # $(words <text>)统计单词个数; wordlist <s>,<e>,<text>: 从字符串<text>中取从<s>开始到<e>的单词串. <s>和<e>是一个数字. 本条指令就是提取第1个参数后面的参数
 
@@ -102,6 +104,7 @@ else
 	PX4_MAKE_ARGS = -j$(j) --no-print-directory
 endif
 
+#获得最后一个makefile的路径，这里应该就是当前makefile的路径
 SRC_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))  #dirname命令:找到上层目录. realpath:返回目录的绝对路径
 
 # check if replay env variable is set & set build dir accordingly
@@ -112,6 +115,7 @@ else
 endif
 
 # additional config parameters passed to cmake
+# cmake中其他module的位置（比如说boost之类的?)
 ifdef EXTERNAL_MODULES_LOCATION
 	CMAKE_ARGS += -DEXTERNAL_MODULES_LOCATION:STRING=$(EXTERNAL_MODULES_LOCATION)
 endif
@@ -123,12 +127,16 @@ endif
 # Functions
 # --------------------------------------------------------------------
 # describe how to build a cmake config
+
+# 这里定义一个cmake-build命令包，整个命令包的意思是先执行cmake，再执行make
+# 把make的第一个参数给PX4_CONFIG
+# eval的意思是执行后面的内容
 define cmake-build
-+@$(eval PX4_CONFIG = $(1))  #$(1)表示调用cmake-build的第一个参数，是某个.cmake的文件名
++@$(eval PX4_CONFIG = $(1))  #$(1)表示调用cmake-build的第一个参数，是某个.cmake的文件名（比如posix-stil-default）
 +@$(eval BUILD_DIR = $(SRC_DIR)/build/$(PX4_CONFIG)$(BUILD_DIR_SUFFIX))
-+@if [ $(PX4_CMAKE_GENERATOR) = "Ninja" ] && [ -e $(BUILD_DIR)/Makefile ]; then rm -rf $(BUILD_DIR); fi
-+@if [ ! -e $(BUILD_DIR)/CMakeCache.txt ]; then mkdir -p $(BUILD_DIR) && cd $(BUILD_DIR) && cmake $(SRC_DIR) -G"$(PX4_CMAKE_GENERATOR)" $(CMAKE_ARGS) -DCONFIG=$(PX4_CONFIG) || (rm -rf $(BUILD_DIR)); fi
-+@$(PX4_MAKE) -C $(BUILD_DIR) $(PX4_MAKE_ARGS) $(ARGS)   #-C表示切换到某个目录下
++@if [ $(PX4_CMAKE_GENERATOR) = "Ninja" ] && [ -e $(BUILD_DIR)/Makefile ]; then rm -rf $(BUILD_DIR); fi  #-e用于判断文件是否存在,&&表示如果前面语句运行成功，则运行这一句;||表示如果前面语句运行不成功，则运行这一句
++@if [ ! -e $(BUILD_DIR)/CMakeCache.txt ]; then mkdir -p $(BUILD_DIR) && cd $(BUILD_DIR) && cmake $(SRC_DIR) -G"$(PX4_CMAKE_GENERATOR)" $(CMAKE_ARGS) -DCONFIG=$(PX4_CONFIG) || (rm -rf $(BUILD_DIR)); fi  #-G用于标注编译器
++@$(PX4_MAKE) -C $(BUILD_DIR) $(PX4_MAKE_ARGS) $(ARGS)   #-C表示切换到某个目录下, PX4_MAKE_ARGS表示make参数，比如-j4; ARGS表示upload/jmavsim等。
 endef
 
 COLOR_BLUE = \033[0;94m
@@ -139,8 +147,10 @@ define colorecho
 endef
 
 # Get a list of all config targets cmake/configs/*.cmake
+# basename返回前缀
+# 该句获得cmake/configs/*.cmake所有的文件名（包含posix_sitl_default等），作为target组
 ALL_CONFIG_TARGETS := $(basename $(shell find "$(SRC_DIR)/cmake/configs" -maxdepth 1 ! -name '*_common*' ! -name '*_sdflight_*' -name '*.cmake' -print | sed  -e 's:^.*/::' | sort))
-# Strip off leading nuttx_
+# Strip off leading nuttx_：去掉nuttx_前缀
 NUTTX_CONFIG_TARGETS := $(patsubst nuttx_%,%,$(filter nuttx_%,$(ALL_CONFIG_TARGETS)))
 
 # ADD CONFIGS HERE
@@ -149,7 +159,7 @@ NUTTX_CONFIG_TARGETS := $(patsubst nuttx_%,%,$(filter nuttx_%,$(ALL_CONFIG_TARGE
 
 # All targets.
 $(ALL_CONFIG_TARGETS):
-	$(call cmake-build,$@)
+	$(call cmake-build,$@)  #$@是自动化变量，表示目标的集合，就像一个数组（这里的数组指ALL_CONFIG_TARGETS)，"$@"取出相应目标，作为参数传递给cmake-build
 
 # Abbreviated config targets.
 
@@ -159,11 +169,11 @@ $(NUTTX_CONFIG_TARGETS):
 
 all_nuttx_targets: $(NUTTX_CONFIG_TARGETS)
 
-posix: posix_sitl_default
+posix: posix_sitl_default  #posix是伪目标，依赖于posix_sitl_default.cmake
 broadcast: posix_sitl_broadcast
 
 # All targets with just dependencies but no recipe must either be marked as phony (or have the special @: as recipe).
-.PHONY: all posix broadcast all_nuttx_targets
+.PHONY: all posix broadcast all_nuttx_targets  #.PHONY表示伪目标，就是这个目标能执行，但不能生成
 
 # Multi- config targets.
 eagle_default: posix_eagle_default qurt_eagle_default
