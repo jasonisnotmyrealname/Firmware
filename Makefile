@@ -105,7 +105,8 @@ else
 endif
 
 #获得最后一个makefile的路径，这里应该就是当前makefile的路径
-SRC_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))  #dirname命令:找到上层目录. realpath:返回目录的绝对路径
+SRC_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+#dirname命令:找到上层目录. realpath:返回目录的绝对路径
 
 # check if replay env variable is set & set build dir accordingly
 ifdef replay
@@ -158,6 +159,10 @@ NUTTX_CONFIG_TARGETS := $(patsubst nuttx_%,%,$(filter nuttx_%,$(ALL_CONFIG_TARGE
 #  Do not put any spaces between function arguments.
 
 # All targets.
+.PHONY: hhh
+hhh:
+	@echo "Usage: $(MAKE) <target>"   #make hhh时显示find: `/home/jason/Project/PX4/Firmware  /cmake/configs'没有那个文件或目录
+
 $(ALL_CONFIG_TARGETS):
 	$(call cmake-build,$@)  #$@是自动化变量，表示目标的集合，就像一个数组（这里的数组指ALL_CONFIG_TARGETS)，"$@"取出相应目标，作为参数传递给cmake-build
 

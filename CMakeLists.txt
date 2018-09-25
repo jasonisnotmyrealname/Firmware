@@ -107,22 +107,23 @@ set(PX4_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")   #如果参数中有空格，
 set(PX4_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")   #内容为 binary tree 根目录的完整路径，在 in-source build 的时候值与 CMAKE_SOURCE_DIR 相同。
 #关于Out-of-source Build:在 CMake 命令列最后一项所指定的路径将被视为 source tree 根目录(out of source build?)，当其他选项缺省时此目录为必要参数。若命令列没有给定路径 CMake 才会将目前工作资料夹当成 source tree 根目录(in source build?)。 source tree 根目录必须含有 CMakeLists.txt ，否则会发生错误。
 
-
+#定义当前的cmake路径，后面的include都默认这个路径前缀
 list(APPEND CMAKE_MODULE_PATH "${PX4_SOURCE_DIR}/cmake")  #CMAKE_MODULE_PATH是用户自己定义的module path. 在include()和find_package()中，cmake会优先在CMAKE_MODULE_PATH中搜索，然后再默认的cmake module路径中搜索(比如boost\CUDA之类的)
 
 #=============================================================================
 # git
 #
 # include指令用来载入并运行来自于文件或模块的CMake代码
-include(common/px4_git)  #CMAKE_MODULE_PATH/common/px4_git，先在CMAKE_MODULE_PATH中查找px4_git.cmake，该文件定义了px4_add_git_submodule函数
+include(common/px4_git)  #CMAKE_MODULE_PATH/common/px4_git : 先在CMAKE_MODULE_PATH中查找px4_git.cmake，该文件定义了px4_add_git_submodule函数
 
 execute_process(
 	COMMAND git describe --always --tags
 	OUTPUT_VARIABLE PX4_GIT_TAG
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 	WORKING_DIRECTORY ${PX4_SOURCE_DIR}
-	)
+	)   #execute_process用于顺序执行多个command，每个command的输出作为下一个command的输入.OUTPUT_VARIABLE存储输出值
 
+#define_property定义几个property:PX4_MODULE_LIBRARIES , PX4_MODULE_PATHS
 define_property(GLOBAL PROPERTY PX4_MODULE_LIBRARIES
                  BRIEF_DOCS "PX4 module libs"
                  FULL_DOCS "List of all PX4 module libraries"
@@ -142,8 +143,8 @@ set(CONFIG "posix_sitl_default" CACHE STRING "desired configuration")  #把变�
 
 string(REPLACE "_" ";" config_args ${CONFIG}) #将变量CONFIG中的 “_”都替换为 “;”，并输出到变量 config_args 中
 list(GET config_args 0 OS) #在 config_args 中索引元素0，并将索引到的list输出到变量OS中（ # posix ）
-list(GET config_args 1 BOARD) # sitl
-list(GET config_args 2 LABEL) # default
+list(GET config_args 1 BOARD) # Board:sitl
+list(GET config_args 2 LABEL) # Label:default
 
 set(EXTERNAL_MODULES_LOCATION "" CACHE STRING "External modules source location")
 
@@ -151,8 +152,13 @@ if (NOT EXTERNAL_MODULES_LOCATION STREQUAL "")
 	get_filename_component(EXTERNAL_MODULES_LOCATION "${EXTERNAL_MODULES_LOCATION}" ABSOLUTE)
 endif()
 
-include(platforms/${OS}/cmake/px4_impl_os.cmake)  #px4_impl_os.cmake定义了几个function
-include(configs/${CONFIG})
+#px4_impl_os.cmake定义了几个function:比如px4_os_prebuild_targets,px4_os_add_flags,并include(common/px4_base)，后者定义了 px4_add_module 等几个函数
+include(platforms/${OS}/cmake/px4_impl_os.cmake)  
+
+#CMAKE_MODULE_PATH/configs/${CONFIG}指某个.cmake文件，比如posix_stil_default
+include(configs/${CONFIG})   
+
+#在CMAKE_MODULE_PATH添加platforms/${OS}/cmake的cmake文件
 list(APPEND CMAKE_MODULE_PATH ${PX4_SOURCE_DIR}/platforms/${OS}/cmake)
 
 # CMake build type (Debug Release RelWithDebInfo MinSizeRel Coverage)
@@ -177,7 +183,7 @@ message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 #=============================================================================
 # project definition
 #
-project(px4 CXX C ASM)  #支持CXX, C, ASM
+project(px4 CXX C ASM)  #支持CXX, C, ASM，cmake此时会在系统中查找各个编译器
 
 set(package-contact "px4users@googlegroups.com")
 
@@ -211,7 +217,7 @@ if (${OS} STREQUAL "posix")
 endif()
 
 #=============================================================================
-# require px4 module interface。这个set的语法...只是定义变量，不赋值吗？
+# require px4 module interface。这个set的语法...px4_required_interface的value是px4_os_prebuild_targets和px4_os_add_flags
 set(px4_required_interface
 	px4_os_prebuild_targets
 	px4_os_add_flags
@@ -320,7 +326,7 @@ px4_os_add_flags(
 	LINK_DIRS link_dirs
 	DEFINITIONS definitions)
 
-px4_join(OUT CMAKE_EXE_LINKER_FLAGS LIST "${CMAKE_EXE_LINKER_FLAGS};${exe_linker_flags}" GLUE " ")  #px4_join？
+px4_join(OUT CMAKE_EXE_LINKER_FLAGS LIST "${CMAKE_EXE_LINKER_FLAGS};${exe_linker_flags}" GLUE " ")  #px4_join在 px4_base 中定义
 px4_join(OUT CMAKE_C_FLAGS LIST "${CMAKE_C_FLAGS};${c_flags};${optimization_flags}" GLUE " ")
 px4_join(OUT CMAKE_CXX_FLAGS LIST "${CMAKE_CXX_FLAGS};${cxx_flags};${optimization_flags}" GLUE " ")
 
