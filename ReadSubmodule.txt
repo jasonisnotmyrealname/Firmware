@@ -1,0 +1,25 @@
+make过程中，在cmake阶段的一些submodule:
+子模组 'msg/tools/gencpp' (https://github.com/ros/gencpp.git) 未对路径 'tools/gencpp' 注册
+子模组路径 'tools/gencpp'：检出 'b41ee3060badd660662e21cd9d4f81971c87a420'
+子模组 'msg/tools/genmsg' (https://github.com/ros/genmsg.git) 未对路径 'tools/genmsg' 注册
+子模组路径 'tools/genmsg'：检出 '42e364661025b8f3d51486dc513d9e29cbd308da'
+子模组 'src/lib/DriverFramework' (https://github.com/PX4/DriverFramework.git) 未对路径 'src/lib/DriverFramework' 注册
+子模组路径 'src/lib/DriverFramework'：检出 '5941bc9e2e64b544ec2c0cbfb0907d9374987b95'
+子模组路径 'src/lib/DriverFramework/dspal'：检出 '9b46b4a57f230672ee0806a523963af70bc44f1c'
+子模组路径 'src/lib/DriverFramework/dspal/cmake_hexagon'：检出 '07168bd5715818802b78f674816ec851307998a7'
+子模组 'src/lib/ecl' (https://github.com/PX4/ecl.git) 未对路径 'ecl' 注册
+子模组路径 'ecl'：检出 'b861594d0b2f8c476cb758f9ae22c83e14920dfe'
+子模组 'src/lib/matrix' (https://github.com/PX4/Matrix.git) 未对路径 'matrix' 注册
+子模组路径 'matrix'：检出 'dc3af8097798881b9b2e72a029a3c6c10abd059b'
+-- PX4 ECL: Very lightweight Estimation & Control Library v0.9.0-588-gb861594
+子模组 'src/drivers/gps/devices' (https://github.com/PX4/GpsDrivers.git) 未对路径 'devices' 注册
+子模组路径 'devices'：检出 'aef48b04ff9b95350c4e5e507eea72a9e971d6a4'
+子模组 'mavlink/include/mavlink/v2.0' (https://github.com/mavlink/c_library_v2.git) 未对路径 '../../../mavlink/include/mavlink/v2.0' 注册
+子模组路径 '../../../mavlink/include/mavlink/v2.0'：检出 'd8fcf0a694dc11b3f83b89a0970e3d8c4e48d418'
+子模组 'Tools/sitl_gazebo' (https://github.com/PX4/sitl_gazebo.git) 未对路径 '../../Tools/sitl_gazebo' 注册
+子模组路径 '../../Tools/sitl_gazebo'：检出 '821c55ca714d7acf93d8ed96af71237b8437e488'
+子模组路径 '../../Tools/sitl_gazebo/external/OpticalFlow'：检出 '549cc7cacb01bb71b2386586305c889d3651cfcc'
+子模组路径 '../../Tools/sitl_gazebo/external/OpticalFlow/external/klt_feature_tracker'：检出 'a0d242294ef638d8fa422ab43f0d476ba37a15a6'
+子模组 'Tools/jMAVSim' (https://github.com/PX4/jMAVSim.git) 未对路径 '../../Tools/jMAVSim' 注册
+子模组路径 '../../Tools/jMAVSim'：检出 '136e92eb8a0131b63c165d5f32dd74c3a2b28993'
+子模组路径 '../../Tools/jMAVSim/jMAVlib'：检出 'afa488d166813038c28572907eacf6eaa54f3c7c'

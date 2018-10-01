@@ -74,35 +74,40 @@ j ?= 4  # '?='表示:如果j没有赋值过， 那就赋值。 如果赋值过(�
 
 
 #用NINJA来代替make执行编译
-NINJA_BIN := ninja  # ':='表示赋值
-ifndef NO_NINJA_BUILD
-	NINJA_BUILD := $(shell $(NINJA_BIN) --version 2>/dev/null) #$(shell <shell command>)它的作用就是执行一个shell命令
+#NINJA_BIN := ninja  # ':='表示赋值
+#ifndef NO_NINJA_BUILD
+#	NINJA_BUILD := $(shell $(NINJA_BIN) --version 2>/dev/null) #$(shell <shell command>)它的作用就是执行一个shell命令
 
-	ifndef NINJA_BUILD
-		NINJA_BIN := ninja-build
-		NINJA_BUILD := $(shell $(NINJA_BIN) --version 2>/dev/null)
-	endif
-endif
+#	ifndef NINJA_BUILD
+#		NINJA_BIN := ninja-build
+#		NINJA_BUILD := $(shell $(NINJA_BIN) --version 2>/dev/null)
+#	endif
+#endif
 
-ifdef NINJA_BUILD
-	PX4_CMAKE_GENERATOR := Ninja
-	PX4_MAKE := $(NINJA_BIN)
+#ifdef NINJA_BUILD
+#	PX4_CMAKE_GENERATOR := Ninja
+#	PX4_MAKE := $(NINJA_BIN)
 
-	ifdef VERBOSE
-		PX4_MAKE_ARGS := -v
-	else
-		PX4_MAKE_ARGS :=
-	endif
-else
-	ifdef SYSTEMROOT
+#	ifdef VERBOSE
+#		PX4_MAKE_ARGS := -v
+#	else
+#		PX4_MAKE_ARGS :=
+#	endif
+#else
+#	ifdef SYSTEMROOT
 		# Windows
-		PX4_CMAKE_GENERATOR := "MSYS\ Makefiles"
-	else
-		PX4_CMAKE_GENERATOR := "Unix\ Makefiles"
-	endif
+#		PX4_CMAKE_GENERATOR := "MSYS\ Makefiles"
+#	else
+#		PX4_CMAKE_GENERATOR := "Unix\ Makefiles"
+#	endif
+#	PX4_MAKE = $(MAKE)
+#	PX4_MAKE_ARGS = -j$(j) --no-print-directory
+#endif
+
+	#暂时用make来build
+	PX4_CMAKE_GENERATOR := "Unix\ Makefiles"
 	PX4_MAKE = $(MAKE)
 	PX4_MAKE_ARGS = -j$(j) --no-print-directory
-endif
 
 #获得最后一个makefile的路径，这里应该就是当前makefile的路径
 SRC_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))

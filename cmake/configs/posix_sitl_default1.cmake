@@ -3,20 +3,20 @@ set(CMAKE_TOOLCHAIN_FILE ${PX4_SOURCE_DIR}/cmake/toolchains/Toolchain-native.cma
 
 set(config_module_list
 	#drivers/barometer
-#	drivers/differential_pressure  #不能删除 依赖drivers__airspeed
-#	drivers/distance_sensor
+	drivers/differential_pressure  #不能删除 依赖drivers__airspeed link drivers__device link cdev
+	drivers/distance_sensor
 	#drivers/telemetry
 
-#	drivers/batt_smbus
-#	drivers/camera_trigger
-#	drivers/gps
-#	drivers/linux_gpio
-#	drivers/pwm_out_sim
-#	drivers/vmount
+	drivers/batt_smbus
+	drivers/camera_trigger
+	drivers/gps
+	drivers/linux_gpio
+	drivers/pwm_out_sim
+	drivers/vmount
 
 	modules/sensors  #不能删除 依赖airspeed/battery/conversion/drivers__device/git_ecl/ecl_validation/mathlib
 
-#	platforms/posix/drivers/tonealrmsim
+	platforms/posix/drivers/tonealrmsim
 
 	#
 	# System commands
@@ -24,52 +24,52 @@ set(config_module_list
 	#systemcmds/bl_update
 	#systemcmds/config
 	#systemcmds/dumpfile
-#	systemcmds/esc_calib
-#	systemcmds/led_control
-#	systemcmds/mixer
-#	systemcmds/motor_ramp
+	systemcmds/esc_calib
+	systemcmds/led_control
+	systemcmds/mixer
+	systemcmds/motor_ramp
 	#systemcmds/mtd
 	#systemcmds/nshterm
-#	systemcmds/param
-#	systemcmds/perf
-#	systemcmds/pwm
-#	systemcmds/reboot
-#	systemcmds/shutdown
-#	systemcmds/sd_bench
-#	systemcmds/top
-#	systemcmds/topic_listener
-#	systemcmds/tune_control
-#	systemcmds/ver
+	systemcmds/param
+	systemcmds/perf
+	systemcmds/pwm
+	systemcmds/reboot
+	systemcmds/shutdown
+	systemcmds/sd_bench
+	systemcmds/top
+	systemcmds/topic_listener
+	systemcmds/tune_control
+	systemcmds/ver
 
 	#
 	# Testing
 	#
-#	drivers/distance_sensor/sf0x/sf0x_tests
+	drivers/distance_sensor/sf0x/sf0x_tests
 	#drivers/test_ppm
-#	lib/rc/rc_tests
-#	modules/commander/commander_tests
-#	lib/controllib/controllib_test
-#	modules/mavlink/mavlink_tests
-#	modules/uORB/uORB_tests
-#	systemcmds/tests
+	lib/rc/rc_tests
+	modules/commander/commander_tests
+	lib/controllib/controllib_test
+	modules/mavlink/mavlink_tests
+	modules/uORB/uORB_tests
+	systemcmds/tests
 
-#	platforms/posix/tests/hello
-#	platforms/posix/tests/hrt_test
-#	platforms/posix/tests/vcdev_test  
+	platforms/posix/tests/hello
+	platforms/posix/tests/hrt_test
+	platforms/posix/tests/vcdev_test  
 
 	#
 	# General system control
 	#
-#	modules/camera_feedback
-#	modules/commander   #不能删, 依赖circuit_breaker/df_driver_framework/git_ecl/ecl_geo
-#	modules/events
+	modules/camera_feedback
+	modules/commander   #不能删, 依赖circuit_breaker/df_driver_framework/git_ecl/ecl_geo
+	modules/events
 	#modules/gpio_led
-#	modules/land_detector
-#	modules/load_mon
+	modules/land_detector
+	modules/load_mon
 	modules/mavlink   #不能删，依赖airspeed/git_mavlink_v2/conversion/git_ecl/ecl_geo/version
-#	modules/navigator    #不能删,依赖git_ecl/ecl_geo/landing_slope
-#	modules/replay
-#	modules/simulator
+	modules/navigator    #不能删,依赖git_ecl/ecl_geo/landing_slope
+	modules/replay
+	modules/simulator  #和drivers/differential_pressusre留一个就行.....
 	#modules/uavcan
 
 	#
@@ -89,19 +89,19 @@ set(config_module_list
 #	modules/gnd_att_control
 #	modules/gnd_pos_control
 #	modules/mc_att_control
-#	modules/mc_pos_control   #不能删 依赖controllib/FlightTasks/git_ecl/ecl_geo
-#	modules/vtol_att_control    #不能删 依赖pwm_limit
+	modules/mc_pos_control   #不能删 依赖controllib/FlightTasks/git_ecl/ecl_geo
+	modules/vtol_att_control    #不能删 依赖pwm_limit
 
 	#
 	# Logging
 	#
-	modules/logger   #可能是可以删除的
+#	modules/logger
 
 	#
 	# Library modules
 	#
 	modules/dataman  #不能删 无依赖项
-#	modules/landing_target_estimator  #不能删 无依赖项
+	modules/landing_target_estimator  #不能删 无依赖项
  
 	#
 	# OBC challenge
