@@ -128,7 +128,7 @@ if (NOT "${CONFIG}" MATCHES "px4io")
 		target_link_libraries(parameters PRIVATE px4_layer)
 	endif()
 
-	target_link_libraries(parameters PRIVATE perf tinybson work_queue)   #zjx 增加了work_queue
+	target_link_libraries(parameters PRIVATE perf tinybson work_queue platforms__common px4_layer drivers__device)   #zjx 增加了work_queue,platforms__common,px4_layer,drivers__device
 	target_compile_definitions(parameters PRIVATE -DMODULE_NAME="parameters")
 	target_compile_options(parameters PRIVATE -Wno-sign-compare) # TODO: fix this
 else()

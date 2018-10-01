@@ -14,7 +14,7 @@ set(config_module_list
 #	drivers/pwm_out_sim
 #	drivers/vmount
 
-	modules/sensors  #不能删除 依赖airspeed/battery/conversion/drivers__device/git_ecl/ecl_validation/mathlib
+#	modules/sensors  #不能删除 依赖airspeed/battery/conversion/drivers__device/git_ecl/ecl_validation/mathlib
 
 #	platforms/posix/drivers/tonealrmsim
 
@@ -50,7 +50,7 @@ set(config_module_list
 #	modules/commander/commander_tests
 #	lib/controllib/controllib_test
 #	modules/mavlink/mavlink_tests
-#	modules/uORB/uORB_tests
+	modules/uORB/uORB_tests
 #	systemcmds/tests
 
 #	platforms/posix/tests/hello
@@ -66,7 +66,7 @@ set(config_module_list
 	#modules/gpio_led
 #	modules/land_detector
 #	modules/load_mon
-	modules/mavlink   #不能删，依赖airspeed/git_mavlink_v2/conversion/git_ecl/ecl_geo/version
+#	modules/mavlink   #不能删，依赖airspeed/git_mavlink_v2/conversion/git_ecl/ecl_geo/version
 #	modules/navigator    #不能删,依赖git_ecl/ecl_geo/landing_slope
 #	modules/replay
 #	modules/simulator
@@ -95,12 +95,12 @@ set(config_module_list
 	#
 	# Logging
 	#
-	modules/logger   #可能是可以删除的
+#	modules/logger   #可能是可以删除的
 
 	#
 	# Library modules
 	#
-	modules/dataman  #不能删 无依赖项
+#	modules/dataman  #不能删 无依赖项
 #	modules/landing_target_estimator  #不能删 无依赖项
  
 	#
