@@ -160,14 +160,14 @@ set(msg_out_path ${PX4_BINARY_DIR}/uORB/topics)
 set(msg_source_out_path	${CMAKE_CURRENT_BINARY_DIR}/topics_sources)
 
 set(uorb_headers)
-set(uorb_sources ${msg_source_out_path}/uORBTopics.cpp)
+set(uorb_sources ${msg_source_out_path}/uORBTopics.cpp)  #就是include了一下各个{msg}.h，并用ORB_ID注册了一下
 foreach(msg_file ${msg_files})
 	get_filename_component(msg ${msg_file} NAME_WE)
-	list(APPEND uorb_headers ${msg_out_path}/${msg}.h)
+	list(APPEND uorb_headers ${msg_out_path}/${msg}.h)   
 	list(APPEND uorb_sources ${msg_source_out_path}/${msg}.cpp)
 endforeach()
 
-# Generate uORB headers
+# Generate uORB headers  用python生成${msg}.h和${msg}.cpp
 add_custom_command(OUTPUT ${uorb_headers}
 	COMMAND ${PYTHON_EXECUTABLE} tools/px_generate_uorb_topic_files.py
 		--headers

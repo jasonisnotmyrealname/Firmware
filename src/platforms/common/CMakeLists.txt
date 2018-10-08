@@ -40,9 +40,9 @@ if (NOT "${OS}" MATCHES "qurt")
 endif()
 
 px4_add_library(platforms__common
-	module.cpp
-	px4_getopt.c
-	shutdown.cpp
+	module.cpp   #定义了一些PRINT_MODULE_DESCRIPTION之类的print函数
+	px4_getopt.c  #get option,获得一些argv
+	shutdown.cpp  #shutdown过程
 	${SRCS}
 	)
 	
