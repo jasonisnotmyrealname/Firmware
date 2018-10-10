@@ -123,33 +123,36 @@ int main(int argc, char **argv)
 	bool pxh_off = false;
 
 	/* Symlinks point to all commands that can be used as a client with a prefix. */
-	const char prefix[] = PX4_BASH_PREFIX;
+	const char prefix[] = PX4_BASH_PREFIX;   //在CMakeLists.txt中定义的，算定义? 内容是"px-"
 	int path_length = 0;
 
 	std::string absolute_binary_path; // full path to the px4 binary being executed
 
 	if (argc > 0) {
 		/* The executed binary name could start with a path, so strip it away */
+		//argv[0]可能包含路径，这里提取出binary程序的名称
 		const std::string full_binary_name = argv[0];
 		const std::string binary_name = file_basename(full_binary_name);
 
+		//通过查看前缀，检验binary execution是不是client的名称，比如px4-uorb
 		if (binary_name.compare(0, strlen(prefix), prefix) == 0) {
-			is_client = true;
+			is_client = true;   //如果带前缀，表明是client
 		}
 
+		//获得路径长度
 		path_length = full_binary_name.length() - binary_name.length();
-
+		//获得绝对路径
 		absolute_binary_path = get_absolute_binary_path(full_binary_name);
 	}
 
-
+	//如果是client，则创建client，然后与server通信
 	if (is_client) {
 		int instance = 0;
-
+		//px4.config中典型的一条脚本指令的执行:px4-uorb --instance ${px4_instance} start
 		if (argc >= 3 && strcmp(argv[1], "--instance") == 0) {
 			instance = strtoul(argv[2], nullptr, 10);
 			/* update argv so that "--instance <instance>" is not visible anymore */
-			argc -= 2;
+			argc -= 2; //把argv中的--instance $px4_instance删除
 
 			for (int i = 1; i < argc; ++i) {
 				argv[i] = argv[i + 2];
@@ -164,18 +167,27 @@ int main(int argc, char **argv)
 		}
 
 		/* Remove the path and prefix. */
+		//通过移动argv[0]指针位置的方式，去掉argv[0]的路径和前缀，比如px4-uorb只剩下uorb
 		argv[0] += path_length + strlen(prefix);
 
+		//本px4是client，创建一个client，有一个对应的_instance_id=instance
 		px4_daemon::Client client(instance);
+
+		//每个client取一个系统随机数作为标识_uuid(为什么不直接用_instance_id?)
 		client.generate_uuid();
+
+		//注册signal的handler,比如SIGINT,SIGPIPE等异常
 		client.register_sig_handler();
+
+		//client处理参数，比如uorb start。处理过程包括：建立recv pipe(uuid)、发送cmd(send pipe,istance_id)、listen()。
 		return client.process_args(argc, (const char **)argv);
 
 	} else {
 		/* Server/daemon apps need to parse the command line arguments. */
+		//server先于client执行
 
 		std::string data_path;
-		std::string commands_file = "etc/init.d/rcS";
+		std::string commands_file = "etc/init.d/rcS";  //server初始化后，需要执行启动脚本，默认是rcS
 		std::string test_data_path;
 		int instance = 0;
 
@@ -183,6 +195,7 @@ int main(int argc, char **argv)
 		int ch;
 		const char *myoptarg = nullptr;
 
+		//从argv中获得-h,-d,-t,-s,-i标识
 		while ((ch = px4_getopt(argc, argv, "hdt:s:i:", &myoptind, &myoptarg)) != EOF) {
 			switch (ch) {
 			case 'h':
@@ -198,7 +211,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 's':
-				commands_file = myoptarg;
+				commands_file = myoptarg;  //输入参数为脚本位置，比如../../../rcS
 				break;
 
 			case 'i':
@@ -228,7 +241,7 @@ int main(int argc, char **argv)
 			return -1;
 		}
 
-
+		//检查px4的文件夹中是否有symlink（比如px4_uorb等）
 		int ret = create_symlinks_if_needed(data_path);
 
 		if (ret != PX4_OK) {
@@ -247,28 +260,38 @@ int main(int argc, char **argv)
 			}
 		}
 
+		//检查是否有启动脚本
 		if (!file_exists(commands_file)) {
 			PX4_ERR("Error opening startup file, does not exist: %s", commands_file.c_str());
 			return -1;
 		}
 
+		//给几个SIGINT等signal信号注册handler
 		register_sig_handler();
+
+		//只有PX4_POSIX_EAGLE有用
 		set_cpu_scaling();
 
+		//创建server（instance默认就是0，通过argv的-i可变更，不知道为什么主线程需要instance）
 		px4_daemon::Server server(instance);
+
+		//启动server,获得client的send pipe，创建recv thread：从client接收指令和参数，在_app中查找对应指令，并执行
 		server.start();
 
+		//在当前目录下创建log和eeprom两个文件夹
 		ret = create_dirs();
 
 		if (ret != PX4_OK) {
 			return ret;
 		}
 
+		//Driver初始化??
 		DriverFramework::Framework::initialize();
-
+		//?包括work_queues_init，hrt_work_queue_init，hrt_init，param_init
 		px4::init_once();
+		//打印欢迎界面
 		px4::init(argc, argv, "px4");
-
+		//执行脚本px4.config，主要是启动px4的driver、module等
 		ret = run_startup_bash_script(commands_file, absolute_binary_path, instance);
 
 		// We now block here until we need to exit.
@@ -276,8 +299,8 @@ int main(int argc, char **argv)
 			wait_to_exit();
 
 		} else {
-			px4_daemon::Pxh pxh;
-			pxh.run_pxh();
+			px4_daemon::Pxh pxh;  //创建shell
+			pxh.run_pxh();  //执行prompt,while循环. 记录command历史，执行command.
 		}
 
 		// When we exit, we need to stop muorb on Snapdragon.
@@ -521,6 +544,8 @@ int run_startup_bash_script(const std::string &commands_file, const std::string 
 	int ret = 0;
 
 	if (!bash_command.empty()) {
+		//执行system指令（相当于在shell中执行bash_command）
+		//此时会启动多个px4进程
 		ret = system(bash_command.c_str());
 
 		if (ret == 0) {

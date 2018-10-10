@@ -105,3 +105,9 @@ Additional information about supported hardware can be found in [PX4 user Guide 
 ## Project Roadmap
 
 A high level project roadmap is available [here](https://www.dronecode.org/roadmap/).
+
+
+##执行
+在build的posix_sitl_default的bin中执行./px4 -s ../../../rcS
+在shell中，可以用help查看指令。可以用list_tasks查看执行的task(thread)，可以用uorb_test测试uorb。
+

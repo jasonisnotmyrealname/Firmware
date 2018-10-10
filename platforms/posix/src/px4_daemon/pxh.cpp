@@ -72,18 +72,19 @@ int Pxh::process_line(const std::string &line, bool silently_fail)
 	}
 
 	if (_apps.empty()) {
-		init_app_map(_apps);
+		init_app_map(_apps);  //初始化_apps:在apps.cpp中定义,_apps是一个map数据类型
 	}
 
-	std::stringstream line_stream(line);
+	std::stringstream line_stream(line);  //stringstream解析对象，以空格和回车键为分隔符
 	std::string word;
 	std::vector<std::string> words;
 
-	// First arg should be the command.
+	//line_stream解析后放到word中
 	while (line_stream >> word) {
 		words.push_back(word);
 	}
 
+	//第一个arg应该是command
 	const std::string &command(words.front());
 
 	if (_apps.find(command) != _apps.end()) {
@@ -99,6 +100,7 @@ int Pxh::process_line(const std::string &line, bool silently_fail)
 		// Explicitly set this nullptr.
 		arg[words.size()] = nullptr;
 
+		// 执行command
 		int retval = _apps[command](words.size(), (char **)arg);
 
 		if (retval) {
@@ -110,7 +112,7 @@ int Pxh::process_line(const std::string &line, bool silently_fail)
 		return retval;
 
 	} else if (command == "help") {
-		list_builtins(_apps);
+		list_builtins(_apps);  //list_builtins在build时生成的apps.cpp中定义
 		return 0;
 
 	} else if (command.length() == 0 || command[0] == '#') {
@@ -127,7 +129,7 @@ int Pxh::process_line(const std::string &line, bool silently_fail)
 	}
 }
 
-
+//px4 shell: 接收键盘input
 void Pxh::run_pxh()
 {
 	_should_exit = false;
@@ -138,7 +140,7 @@ void Pxh::run_pxh()
 	int cursor_position = 0; // position of the cursor from right to left
 	// (0: all the way to the right, mystr.length: all the way to the left)
 
-	_print_prompt();
+	_print_prompt();   //打印"pxh>"
 
 	while (!_should_exit) {
 
@@ -163,7 +165,7 @@ void Pxh::run_pxh()
 			_history.reset_to_end();
 
 			printf("\n");
-			process_line(mystr, false);
+			process_line(mystr, false);   //输入回车，执行指令
 			// reset string and cursor position
 			mystr = "";
 			cursor_position = 0;
@@ -172,7 +174,7 @@ void Pxh::run_pxh()
 			_print_prompt();
 			break;
 
-		case '\033': {	// arrow keys
+		case '\033': {	// arrow keys:输入的是箭头、HOME、END等键
 				c = getchar();	// skip first one, does not have the info
 				c = getchar();
 
@@ -215,7 +217,7 @@ void Pxh::run_pxh()
 
 		default:	// any other input
 			if (c > 3) {
-				add_string += (char)c;
+				add_string += (char)c;    //向add_string追加字符
 
 			} else {
 				update_prompt = false;
