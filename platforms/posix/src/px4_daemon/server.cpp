@@ -57,7 +57,7 @@ namespace px4_daemon
 
 Server *Server::_instance = nullptr;
 
-Server::Server(int instance_id)
+Server::Server(int instance_id)    //instance_id用于创建一个对应的pipe文件
 	: _mutex(PTHREAD_MUTEX_INITIALIZER),
 	  _instance_id(instance_id)
 {
@@ -72,15 +72,18 @@ Server::~Server()
 int
 Server::start()
 {
-	std::string client_send_pipe_path = get_client_send_pipe_path(_instance_id);
+	// _instance_id为0。 获得监听client的pipe的路径:不管有多少client，只有共享一个client_send_pipe?
+	std::string client_send_pipe_path = get_client_send_pipe_path(_instance_id);  // '/tmp/px4_client_send_pipe-${_instance_id}'
 
 	// Delete pipe in case it exists already.
-	unlink(client_send_pipe_path.c_str());
+	unlink(client_send_pipe_path.c_str());  // 用unlink删除一个文件?
 
 	// Create new pipe to listen to clients.
 	// This needs to happen before we return from this method, so that the caller can launch clients.
+	// 建立一个监听client的pipe, 0666表示unix中的权限
 	mkfifo(client_send_pipe_path.c_str(), 0666);
 
+	// 创建pthread,_server_main_pthread是pthread_t名称，_server_main_trampoline是线程入口函数
 	if (0 != pthread_create(&_server_main_pthread,
 				nullptr,
 				_server_main_trampoline,
@@ -94,10 +97,11 @@ Server::start()
 	return 0;
 }
 
+//pthread入口程序
 void *
 Server::_server_main_trampoline(void *arg)
 {
-	if (_instance) {
+	if (_instance) {   //_instance就是当前this指针
 		_instance->_server_main(arg);
 	}
 
@@ -109,6 +113,7 @@ void Server::_pthread_key_destructor(void *arg)
 	delete ((CmdThreadSpecificData *)arg);
 }
 
+//pthread入口程序所执行的main函数
 void
 Server::_server_main(void *arg)
 {
@@ -120,20 +125,24 @@ Server::_server_main(void *arg)
 		return;
 	}
 
+	//打开监听client的pipe
 	std::string client_send_pipe_path = get_client_send_pipe_path(_instance_id);
 	int client_send_pipe_fd = open(client_send_pipe_path.c_str(), O_RDONLY);
 
+	// 主循环，和client通信
 	while (true) {
 
 		client_send_packet_s packet;
 
 		// We only read as much as we need, otherwise we might get out of
 		// sync with packets.
+		// 读帧头
 		int bytes_read = read(client_send_pipe_fd, &packet, sizeof(client_send_packet_s::header));
 
 		if (bytes_read > 0) {
 
 			// Using the header we can determine how big the payload is.
+			// 根据帧头的数据读payload长度
 			int payload_to_read = sizeof(packet)
 					      - sizeof(packet.header)
 					      - sizeof(packet.payload)
@@ -141,8 +150,10 @@ Server::_server_main(void *arg)
 
 			// Again, we only read as much as we need because otherwise we need
 			// hold a buffer and parse it.
+			// 读payload
 			bytes_read = read(client_send_pipe_fd, ((uint8_t *)&packet) + bytes_read, payload_to_read);
 
+			// 解析client发来的packet(根据packet类型决定是执行还是kill掉)
 			if (bytes_read > 0) {
 
 				_parse_client_send_packet(packet);
@@ -164,6 +175,7 @@ Server::_server_main(void *arg)
 void
 Server::_parse_client_send_packet(const client_send_packet_s &packet)
 {
+	//client发来的packet类型有两种
 	switch (packet.header.msg_id) {
 	case client_send_packet_s::message_header_s::e_msg_id::EXECUTE:
 		_execute_cmd_packet(packet);
@@ -189,6 +201,7 @@ Server::_execute_cmd_packet(const client_send_packet_s &packet)
 
 	// We open the client's specific pipe to write the return value and stdout back to.
 	// The pipe's path is created knowing the UUID of the client.
+	// 每个client都有一个接收server的pipe，server把执行结果发到这些pipe中
 	char path[RECV_PIPE_PATH_LEN];
 	int ret = get_client_recv_pipe_path(packet.header.client_uuid, path, RECV_PIPE_PATH_LEN);
 
@@ -197,6 +210,7 @@ Server::_execute_cmd_packet(const client_send_packet_s &packet)
 		return;
 	}
 
+	// 打开这个client的pipe
 	int pipe_fd = open(path, O_WRONLY);
 
 	if (pipe_fd < 0) {
@@ -209,6 +223,7 @@ Server::_execute_cmd_packet(const client_send_packet_s &packet)
 
 	// We need to copy everything that the new thread needs because we will go
 	// out of scope.
+	// 把参数latch下来，在后面传给_run_cmd
 	RunCmdArgs *args = new RunCmdArgs;
 	strncpy(args->cmd, (char *)packet.payload.execute_msg.cmd, sizeof(args->cmd));
 	args->client_uuid = packet.header.client_uuid;
@@ -216,7 +231,8 @@ Server::_execute_cmd_packet(const client_send_packet_s &packet)
 	args->is_atty = packet.payload.execute_msg.is_atty;
 
 	_lock(); // need to lock, otherwise the thread could already exit before we insert into the map
-	ret = pthread_create(&new_pthread, nullptr, Server::_run_cmd, (void *)args);
+	
+	ret = pthread_create(&new_pthread, nullptr, Server::_run_cmd, (void *)args);  //创建一个thread执行_run_cmd
 
 	if (ret != 0) {
 		PX4_ERR("could not start pthread (%i)", ret);
@@ -224,7 +240,7 @@ Server::_execute_cmd_packet(const client_send_packet_s &packet)
 
 	} else {
 		// We won't join the thread, so detach to automatically release resources at its end
-		pthread_detach(new_pthread);
+		pthread_detach(new_pthread);  //detach这个_run_cmd的线程，不用等它了，让它自己结束
 		// We keep two maps for cleanup if a thread is finished or killed.
 		_client_uuid_to_pthread.insert(std::pair<uint64_t, pthread_t>
 					       (packet.header.client_uuid, new_pthread));
@@ -267,7 +283,7 @@ Server::_kill_cmd_packet(const client_send_packet_s &packet)
 }
 
 
-
+//执行client发来的command
 void
 *Server::_run_cmd(void *arg)
 {

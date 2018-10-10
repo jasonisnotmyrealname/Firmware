@@ -65,6 +65,7 @@ Pxh::~Pxh()
 	_instance = nullptr;
 }
 
+// 执行command line
 int Pxh::process_line(const std::string &line, bool silently_fail)
 {
 	if (line.empty()) {
