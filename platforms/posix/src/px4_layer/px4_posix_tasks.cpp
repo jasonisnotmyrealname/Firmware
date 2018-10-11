@@ -118,6 +118,7 @@ px4_systemreset(bool to_bootloader)
 	system_exit(0);
 }
 
+//作为OS中间层，该函数用于在线程池(taskmap)中产生新的thread/task(?)，在driver/module中被大量使用
 px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int stack_size, px4_main_t entry,
 			      char *const argv[])
 {
@@ -142,7 +143,7 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 
 	unsigned long structsize = sizeof(pthdata_t) + (argc + 1) * sizeof(char *);
 
-	// not safe to pass stack data to the thread creation
+	// not safe to pass stack data to the thread creation 
 	pthdata_t *taskdata = (pthdata_t *)malloc(structsize + len);
 	memset(taskdata, 0, structsize + len);
 	unsigned long offset = ((unsigned long)taskdata) + structsize;
@@ -159,12 +160,12 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 		offset += strlen(argv[i]) + 1;
 	}
 
-	// Must add NULL at end of argv
+	// Must add NULL at end of argv. pthread的argv的结尾必须是一个nullptr
 	taskdata->argv[argc] = (char *)nullptr;
 
 	PX4_DEBUG("starting task %s", name);
 
-	pthread_attr_t attr;
+	pthread_attr_t attr;  //pthread_attr_t主要包括scope属性、detach属性、堆栈地址、堆栈大小、优先级。
 	int rv = pthread_attr_init(&attr);
 
 	if (rv != 0) {
@@ -199,6 +200,7 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 		return (rv < 0) ? rv : -rv;
 	}
 
+	//设置线程调度策略:包括SCHED_FIFO(先进先出)/SCHED_RR(轮询)
 	rv = pthread_attr_setschedpolicy(&attr, scheduler);
 
 	if (rv != 0) {
@@ -215,6 +217,7 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 
 	param.sched_priority = priority;
 
+	//设置线程优先级
 	rv = pthread_attr_setschedparam(&attr, &param);
 
 	if (rv != 0) {
@@ -228,6 +231,7 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 
 	px4_task_t taskid = 0;
 
+	//创建最多50个线程
 	for (i = 0; i < PX4_MAX_TASKS; ++i) {
 		if (!taskmap[i].isused) {
 			taskmap[i].name = name;
@@ -244,13 +248,14 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 		return -ENOSPC;
 	}
 
+	//在线程池(taskmap)中创建新线程，成功返回0，不成功返回-1
 	rv = pthread_create(&taskmap[taskid].pid, &attr, &entry_adapter, (void *) taskdata);
 
 	if (rv != 0) {
 
-		if (rv == EPERM) {
+		if (rv == EPERM) {   //表示没有相应的权限
 			//printf("WARNING: NOT RUNING AS ROOT, UNABLE TO RUN REALTIME THREADS\n");
-			rv = pthread_create(&taskmap[taskid].pid, nullptr, &entry_adapter, (void *) taskdata);
+			rv = pthread_create(&taskmap[taskid].pid, nullptr, &entry_adapter, (void *) taskdata);  //创建没有attr的线程?
 
 			if (rv != 0) {
 				PX4_ERR("px4_task_spawn_cmd: failed to create thread %d %d\n", rv, errno);
@@ -275,6 +280,7 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 	return taskid;
 }
 
+//删除线程，首先等待
 int px4_task_delete(px4_task_t id)
 {
 	int rv = 0;
@@ -292,13 +298,13 @@ int px4_task_delete(px4_task_t id)
 
 	// If current thread then exit, otherwise cancel
 	if (pthread_self() == pid) {
-		pthread_join(pid, nullptr);
+		pthread_join(pid, nullptr);  //等待当前thread运行结束，释放资源
 		taskmap[id].isused = false;
 		pthread_mutex_unlock(&task_mutex);
 		pthread_exit(nullptr);
 
 	} else {
-		rv = pthread_cancel(pid);
+		rv = pthread_cancel(pid);  //cancel只是告诉这个线程你要取消，但是不知道它什么时候取消，只有用pthread_join可以知道
 	}
 
 	taskmap[id].isused = false;
@@ -307,6 +313,7 @@ int px4_task_delete(px4_task_t id)
 	return rv;
 }
 
+//退出线程，只在commander.cpp和mavlink_main.cpp两处用到，做异常处理用
 void px4_task_exit(int ret)
 {
 	int i;
@@ -333,6 +340,7 @@ void px4_task_exit(int ret)
 	pthread_exit((void *)(unsigned long)ret);
 }
 
+//kill比exit要严重一点?
 int px4_task_kill(px4_task_t id, int sig)
 {
 	int rv = 0;
@@ -349,11 +357,12 @@ int px4_task_kill(px4_task_t id, int sig)
 	}
 
 	// If current thread then exit, otherwise cancel
-	rv = pthread_kill(pid, sig);
+	rv = pthread_kill(pid, sig);   //send一个sig，如果这个thread没有响应，就kill掉
 
 	return rv;
 }
 
+//列出所有的task，在shell的list_tasks中用到
 void px4_show_tasks()
 {
 	int idx;
@@ -374,6 +383,7 @@ void px4_show_tasks()
 
 }
 
+//查看px4_task是否在运行(通过taskmap)
 bool px4_task_is_running(const char *taskname)
 {
 	int idx;
@@ -383,10 +393,10 @@ bool px4_task_is_running(const char *taskname)
 			return true;
 		}
 	}
-
 	return false;
 }
 
+//找到taskmap中的第一个thread?
 px4_task_t px4_getpid()
 {
 	pthread_t pid = pthread_self();

@@ -155,7 +155,6 @@ Server::_server_main(void *arg)
 
 			// 解析client发来的packet(根据packet类型决定是执行还是kill掉)
 			if (bytes_read > 0) {
-
 				_parse_client_send_packet(packet);
 
 			}
@@ -172,6 +171,7 @@ Server::_server_main(void *arg)
 	close(client_send_pipe_fd);
 }
 
+//解析client发来的packet，执行后再向client_recv_pipe写入数据（该client_recv_pipe在创建client时产生）
 void
 Server::_parse_client_send_packet(const client_send_packet_s &packet)
 {
@@ -201,7 +201,7 @@ Server::_execute_cmd_packet(const client_send_packet_s &packet)
 
 	// We open the client's specific pipe to write the return value and stdout back to.
 	// The pipe's path is created knowing the UUID of the client.
-	// 每个client都有一个接收server的pipe，server把执行结果发到这些pipe中
+	// 每个client都有一个接收server的pipe，server通过client消息中的uuid打开这些pipe，并把执行结果发到这些pipe中
 	char path[RECV_PIPE_PATH_LEN];
 	int ret = get_client_recv_pipe_path(packet.header.client_uuid, path, RECV_PIPE_PATH_LEN);
 

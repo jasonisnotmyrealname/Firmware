@@ -95,10 +95,12 @@ Client::generate_uuid()
 	return ret;
 }
 
+//在client中执行argv
 int
 Client::process_args(const int argc, const char **argv)
 {
 	// Prepare return pipe first to avoid a race.
+	// 先创建client自己的recv_pipe
 	int ret = _prepare_recv_pipe();
 
 	if (ret != 0) {
@@ -106,6 +108,7 @@ Client::process_args(const int argc, const char **argv)
 		return -2;
 	}
 
+	//组织packet写入到client send pipe中
 	ret = _send_cmds(argc, argv);
 
 	if (ret != 0) {
@@ -113,6 +116,7 @@ Client::process_args(const int argc, const char **argv)
 		return -3;
 	}
 
+	//监听client recv pipe
 	return _listen();
 }
 
@@ -120,13 +124,14 @@ Client::process_args(const int argc, const char **argv)
 int
 Client::_prepare_recv_pipe()
 {
+	//给client的recv_pipe命名
 	int ret = get_client_recv_pipe_path(_uuid, _recv_pipe_path, sizeof(_recv_pipe_path));
 
 	if (ret < 0) {
 		PX4_ERR("failed to assemble path");
 		return ret;
 	}
-
+	//创建pipe（0666:rwxrwxrwx,x表示可执行）
 	ret = mkfifo(_recv_pipe_path, 0666);
 
 	if (ret < 0) {
@@ -167,6 +172,7 @@ Client::_send_cmds(const int argc, const char **argv)
 	// The size is +1 because we want to include the null termination.
 	packet.header.payload_length = cmd_buf.size() + 1 + sizeof(packet.payload.execute_msg.is_atty);
 
+	// 打开client_send_pipe(这个_instance_id和server中的不一样，怎么保证client和server用的是一个pipe???)
 	_client_send_pipe_fd = open(get_client_send_pipe_path(_instance_id).c_str(), O_WRONLY);
 
 	if (_client_send_pipe_fd < 0) {
@@ -174,6 +180,7 @@ Client::_send_cmds(const int argc, const char **argv)
 		return _client_send_pipe_fd;
 	}
 
+	//将packet写入到pipe中
 	int bytes_to_send = get_client_send_packet_length(&packet);
 	int bytes_sent = write(_client_send_pipe_fd, &packet, bytes_to_send);
 
@@ -185,6 +192,7 @@ Client::_send_cmds(const int argc, const char **argv)
 	return 0;
 }
 
+//监听server返回的消息
 int
 Client::_listen()
 {
@@ -249,6 +257,7 @@ Client::_listen()
 	return exit_arg;
 }
 
+//server返回的消息有两种，一种是retval(return value)，一种是stdout(向终端print消息)
 int
 Client::_parse_client_recv_packet(const client_recv_packet_s &packet, int &retval, bool &should_exit)
 {

@@ -32,7 +32,7 @@
  ****************************************************************************/
 /**
  * @file history.cpp
- *
+ * 用于记录px4 shell的command历史
  * @author Julian Oes <julian@oes.ch>
  */
 

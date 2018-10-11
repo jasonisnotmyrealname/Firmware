@@ -54,6 +54,7 @@
 #include <string>
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <signal.h>
 #include <stdio.h>
 #include <errno.h>
@@ -128,32 +129,42 @@ int main(int argc, char **argv)
 
 	std::string absolute_binary_path; // full path to the px4 binary being executed
 
+	//测试... zjx debug
+	std::cout << "argc is " << argc <<std::endl; 
+	std::cout << "argv[0] is " << argv[0] <<std::endl; 
+	std::cout << "argv[1] is " << argv[1] <<std::endl;
+	std::cout << "argv[2] is " << argv[2] <<std::endl;
+	std::cout << "argv[3] is " << argv[3] <<std::endl;
+
+	//解析argv是client还是server
 	if (argc > 0) {
 		/* The executed binary name could start with a path, so strip it away */
 		//argv[0]可能包含路径，这里提取出binary程序的名称
 		const std::string full_binary_name = argv[0];
 		const std::string binary_name = file_basename(full_binary_name);
 
-		//通过查看前缀，检验binary execution是不是client的名称，比如px4-uorb
+		//通过查看前缀"px4-"，检验binary execution是不是client的名称，比如px4-uorb就是client,而px4就是server
 		if (binary_name.compare(0, strlen(prefix), prefix) == 0) {
 			is_client = true;   //如果带前缀，表明是client
 		}
 
 		//获得路径长度
 		path_length = full_binary_name.length() - binary_name.length();
-		//获得绝对路径
+		//获得可执行文件的绝对路径
 		absolute_binary_path = get_absolute_binary_path(full_binary_name);
 	}
+
+	//std::cout << "absolute_binary_path is " << absolute_binary_path <<std::endl;
 
 	//如果是client，则创建client，然后与server通信
 	if (is_client) {
 		int instance = 0;
-		//px4.config中典型的一条脚本指令的执行:px4-uorb --instance ${px4_instance} start
+		//px4.config中典型的一条脚本指令的执行:px4-uorb --instance $px4_instance start
+		// px4_instance在px4-alias.sh中定义，一般为0
 		if (argc >= 3 && strcmp(argv[1], "--instance") == 0) {
-			instance = strtoul(argv[2], nullptr, 10);
+			instance = strtoul(argv[2], nullptr, 10);   //把字符串转为长整型
 			/* update argv so that "--instance <instance>" is not visible anymore */
-			argc -= 2; //把argv中的--instance $px4_instance删除
-
+			argc -= 2; //把argv中的"--instance $px4_instance"删除,因此上面脚本指令就变成px4-uorb start
 			for (int i = 1; i < argc; ++i) {
 				argv[i] = argv[i + 2];
 			}
@@ -170,16 +181,16 @@ int main(int argc, char **argv)
 		//通过移动argv[0]指针位置的方式，去掉argv[0]的路径和前缀，比如px4-uorb只剩下uorb
 		argv[0] += path_length + strlen(prefix);
 
-		//本px4是client，创建一个client，有一个对应的_instance_id=instance
+		//本px4是client，创建一个client，有一个对应的_instance_id=instance(一般都是0)
 		px4_daemon::Client client(instance);
 
-		//每个client取一个系统随机数作为标识_uuid(为什么不直接用_instance_id?)
+		//每个client取一个系统随机数作为标识_uuid
 		client.generate_uuid();
 
 		//注册signal的handler,比如SIGINT,SIGPIPE等异常
 		client.register_sig_handler();
 
-		//client处理参数，比如uorb start。处理过程包括：建立recv pipe(uuid)、发送cmd(send pipe,istance_id)、listen()。
+		//client处理参数argv，比如uorb start。处理过程包括：建立recv pipe(uuid)、发送cmd(send pipe,istance_id)、listen()。
 		return client.process_args(argc, (const char **)argv);
 
 	} else {
@@ -260,13 +271,13 @@ int main(int argc, char **argv)
 			}
 		}
 
-		//检查是否有启动脚本
+		//检查是否有启动脚本(脚本文件名:commands_file)
 		if (!file_exists(commands_file)) {
 			PX4_ERR("Error opening startup file, does not exist: %s", commands_file.c_str());
 			return -1;
 		}
 
-		//给几个SIGINT等signal信号注册handler
+		//给几个SIGINT等signal信号注册handler  ???
 		register_sig_handler();
 
 		//只有PX4_POSIX_EAGLE有用
@@ -275,7 +286,7 @@ int main(int argc, char **argv)
 		//创建server（instance默认就是0，通过argv的-i可变更，不知道为什么主线程需要instance）
 		px4_daemon::Server server(instance);
 
-		//启动server,获得client的send pipe，创建recv thread：从client接收指令和参数，在_app中查找对应指令，并执行
+		//启动server线程,获得client的send pipe，创建recv thread：从client接收指令和参数，在_app中查找对应指令，并执行
 		server.start();
 
 		//在当前目录下创建log和eeprom两个文件夹
@@ -291,8 +302,9 @@ int main(int argc, char **argv)
 		px4::init_once();
 		//打印欢迎界面
 		px4::init(argc, argv, "px4");
-		//执行脚本px4.config，主要是启动px4的driver、module等
+		//执行脚本commands_file:比如px4.config/rcS，主要是启动px4的driver、module等,比如说uorb start. instance为0.
 		ret = run_startup_bash_script(commands_file, absolute_binary_path, instance);
+		//std::cout << "instance is " << instance << std::endl; //zjx debug
 
 		// We now block here until we need to exit.
 		if (pxh_off) {
@@ -496,27 +508,32 @@ std::string get_absolute_binary_path(const std::string &argv0)
 	return pwd() + "/" + base;
 }
 
+//执行脚本,比如rcS等
 int run_startup_bash_script(const std::string &commands_file, const std::string &absolute_binary_path,
 			    int instance)
 {
 	std::string bash_command("bash ");
 
-	bash_command += commands_file + ' ' + std::to_string(instance);
+	bash_command += commands_file + ' ' + std::to_string(instance);  //比如: bash rcS 0
+	
+	//std::cout << "bash command is: " << bash_command << std::endl;  //zjx debug
 
 	// Update the PATH variable to include the absolute_binary_path
 	// (required for the px4-alias.sh script and px4-* commands).
 	// They must be within the same directory as the px4 binary
 	const char *path_variable = "PATH";
 	std::string updated_path = absolute_binary_path;
-	const char *path = getenv(path_variable);
+	const char *path = getenv(path_variable);  //环境变量PATH
 
 	if (path) {
 		std::string spath = path;
 
+		//std::cout << "spath is " << spath << std::endl;  //zjx debug
+
 		// Check if absolute_binary_path already in PATH
 		bool already_in_path = false;
 		std::size_t current, previous = 0;
-		current = spath.find(':');
+		current = spath.find(':');  //":"是环境变量PATH中的间隔符号
 
 		while (current != std::string::npos) {
 			if (spath.substr(previous, current - previous) == absolute_binary_path) {
@@ -531,10 +548,11 @@ int run_startup_bash_script(const std::string &commands_file, const std::string 
 			already_in_path = true;
 		}
 
-		if (!already_in_path) {
+		if (!already_in_path) {   //把build/.../bin/的路径放到环境变量中(该路径下包括了其他client的链接，比如px4-dataman)
 			// Prepend to path to prioritize PX4 commands over potentially already installed PX4 commands.
 			updated_path = updated_path + ":" + path;
 			setenv(path_variable, updated_path.c_str(), 1);
+			//std::cout << "updated_path is "  << updated_path << std::endl; //zjx debug
 		}
 	}
 
@@ -544,8 +562,8 @@ int run_startup_bash_script(const std::string &commands_file, const std::string 
 	int ret = 0;
 
 	if (!bash_command.empty()) {
-		//执行system指令（相当于在shell中执行bash_command）
-		//此时会启动多个px4进程
+		//执行system指令（相当于在shell中执行bash_command） 
+		//system()调用fork()产生子进程，由子进程来调用/bin/sh-c(比如说bash) string来执行参数string字符串所代表的命令
 		ret = system(bash_command.c_str());
 
 		if (ret == 0) {

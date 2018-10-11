@@ -75,6 +75,7 @@ void init_once()
 	param_init();
 }
 
+//在main()函数中，app_name为'px4'
 void init(int argc, char *argv[], const char *app_name)
 {
 	printf("\n");
@@ -92,7 +93,7 @@ void init(int argc, char *argv[], const char *app_name)
 #ifdef __PX4_DARWIN
 	(void)pthread_setname_np(app_name);
 #else
-	(void)pthread_setname_np(pthread_self(), app_name);
+	(void)pthread_setname_np(pthread_self(), app_name);  //pthread_self()只是用来描述统一进程中的不同线程
 #endif
 }
 

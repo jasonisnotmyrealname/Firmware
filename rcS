@@ -2,6 +2,8 @@
 
 # PX4 commands need the 'px4-' prefix in bash.
 # (px4-alias.sh is expected to be in the PATH)
+# px4-alias是将uorb等command添加前缀，变为px4-uorb，然后让bash去执行。因此px4-alias.sh是必须的。
+
 source px4-alias.sh
 
 uorb start

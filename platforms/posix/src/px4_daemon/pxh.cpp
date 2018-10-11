@@ -88,6 +88,7 @@ int Pxh::process_line(const std::string &line, bool silently_fail)
 	//第一个arg应该是command
 	const std::string &command(words.front());
 
+	//在apps中找到command并执行
 	if (_apps.find(command) != _apps.end()) {
 
 		// Note that argv[argc] always needs to be a nullptr.
@@ -102,7 +103,7 @@ int Pxh::process_line(const std::string &line, bool silently_fail)
 		arg[words.size()] = nullptr;
 
 		// 执行command
-		int retval = _apps[command](words.size(), (char **)arg);
+		int retval = _apps[command](words.size(), (char **)arg);   //_apps[command]指map中对应的函数，后面两个是该函数的参数
 
 		if (retval) {
 			if (!silently_fail) {
@@ -179,12 +180,12 @@ void Pxh::run_pxh()
 				c = getchar();	// skip first one, does not have the info
 				c = getchar();
 
-				if (c == 'A') { // arrow up
+				if (c == 'A') { // arrow up:翻看command历史
 					_history.try_to_save_current_line(mystr);
 					_history.get_previous(mystr);
 					cursor_position = 0; // move cursor to end of line
 
-				} else if (c == 'B') { // arrow down
+				} else if (c == 'B') { // arrow down:翻看command历史
 					_history.get_next(mystr);
 					cursor_position = 0; // move cursor to end of line
 
