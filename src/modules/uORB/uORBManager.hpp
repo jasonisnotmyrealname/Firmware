@@ -61,6 +61,7 @@ class Manager;
  * uORB nodes for each uORB topics and also implements the behavor of the
  * uORB Api's.
  */
+//uorb是单例模式，一个类仅能有一个实例
 class uORB::Manager
 #ifdef ORB_COMMUNICATOR
 	: public uORBCommunicator::IChannelRxHandler
@@ -80,6 +81,7 @@ public:
 	 * Make sure initialize() is called first.
 	 * @return uORB::Manager*
 	 */
+	// 获取唯一可用的对象
 	static uORB::Manager *get_instance() { return _Instance; }
 
 	/**
@@ -402,7 +404,7 @@ private: // class methods
 		      int priority = ORB_PRIO_DEFAULT);
 
 private: // data members
-	static Manager *_Instance;
+	static Manager *_Instance;   //唯一的、在initialize()中被实例化的对象
 
 #ifdef ORB_COMMUNICATOR
 	// the communicator channel instance.

@@ -100,13 +100,16 @@ uorb_main(int argc, char *argv[])
 			return 0;
 		}
 
+		//创建Manager(称为_Instance)，这个类管理着每一个UORB主题和节点
 		if (!uORB::Manager::initialize()) {
 			PX4_ERR("uorb manager alloc failed");
 			return -ENOMEM;
 		}
 
 		/* create the driver */
-		g_dev = uORB::Manager::get_instance()->get_device_master();
+		// 创建唯一的MasterNode实例，负责内部的设备节点的控制
+		// 外部函数调用uORB时候都会通过uORB::Manger::get_instance()这个函数获取Manger的实例指针。这个函数是静态函数，根据判断命名空间中_Instance指针是否为空，确保全nameespace中只有这么一个Manger实例。
+		g_dev = uORB::Manager::get_instance()->get_device_master();  //get，如果没有就创建一个uORB::DeviceMaster并初始化(赋值到_device_master)，CDev位置在"/obj/_obj_"
 
 		if (g_dev == nullptr) {
 			return -errno;

@@ -87,7 +87,7 @@ uORB::Manager::~Manager()
 uORB::DeviceMaster *uORB::Manager::get_device_master()
 {
 	if (!_device_master) {
-		_device_master = new DeviceMaster();
+		_device_master = new DeviceMaster();  //创建唯一的MasterNode实例:DeviceMaster,继承自CDev
 
 		if (_device_master) {
 			int ret = _device_master->init();
