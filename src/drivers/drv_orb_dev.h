@@ -59,7 +59,7 @@
 #define ORB_MAXNAME		32
 
 #define _ORBIOCBASE		(0x2600)
-#define _ORBIOC(_n)		(_PX4_IOC(_ORBIOCBASE, _n))
+#define _ORBIOC(_n)		(_PX4_IOC(_ORBIOCBASE, _n))   //对于posix，有#define _PX4_IOC(x,y) _IO(x,y)
 
 /*
  * IOCTLs for the uORB control device

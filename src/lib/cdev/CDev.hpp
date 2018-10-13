@@ -55,6 +55,7 @@ namespace cdev
 /**
  * Abstract class for any character device
  */
+//driver都继承与这个基类，因此该基类定义了virtual函数用于让派生类重载
 class __EXPORT CDev
 {
 public:

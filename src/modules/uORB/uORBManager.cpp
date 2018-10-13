@@ -187,8 +187,9 @@ orb_advert_t uORB::Manager::orb_advertise_multi(const struct orb_metadata *meta,
 
 #endif /* ORB_USE_PUBLISHER_RULES */
 
-	/* open the node as an advertiser */
-	int fd = node_open(meta, data, true, instance, priority);
+	/* open the node as an advertiser */  
+	// 打开node文件
+	int fd = node_open(meta, data, true, instance, priority);  //在orb_advertise中instance为nullptr
 
 	if (fd == PX4_ERROR) {
 		PX4_ERR("%s advertise failed", meta->o_name);
@@ -260,6 +261,7 @@ int uORB::Manager::orb_unsubscribe(int fd)
 	return px4_close(fd);
 }
 
+//向handle中写数据，然后通知所有正在poll的waiter
 int uORB::Manager::orb_publish(const struct orb_metadata *meta, orb_advert_t handle, const void *data)
 {
 #ifdef ORB_USE_PUBLISHER_RULES
@@ -291,6 +293,9 @@ int uORB::Manager::orb_copy(const struct orb_metadata *meta, int handle, void *b
 	return PX4_OK;
 }
 
+///** Check whether the topic has been updated since it was last read, sets *(bool *)arg */
+//#define ORBIOCUPDATED		_ORBIOC(11)
+//#define px4_ioctl 	_GLOBAL ioctl
 int uORB::Manager::orb_check(int handle, bool *updated)
 {
 	/* Set to false here so that if `px4_ioctl` fails to false. */
@@ -329,13 +334,15 @@ int uORB::Manager::node_advertise(const struct orb_metadata *meta, int *instance
 	const struct orb_advertdata adv = { meta, instance, priority };
 
 	/* open the control device */
-	fd = px4_open(TOPIC_MASTER_DEVICE_PATH, 0);
+	// 在posix中，有#define px4_open 	_GLOBAL open
+	fd = px4_open(TOPIC_MASTER_DEVICE_PATH, 0);  // 打开一个/obj/_obj_的文件，‘0’表示flag（是read?write?)
 
 	if (fd < 0) {
 		goto out;
 	}
 
 	/* advertise the object */
+	// ioctrl:对io进行控制的函数，把要对io设备传递的操作通过request发送过去(见man ioctl)，这个request由io的驱动来解释和执行
 	ret = px4_ioctl(fd, ORBIOCADVERTISE, (unsigned long)(uintptr_t)&adv);
 
 	/* it's PX4_OK if it already exists */
@@ -352,6 +359,10 @@ out:
 	return ret;
 }
 
+// 比如*meta是 ORB_ID(vehicle_attitude),data是一个vehicle_attitude_s定义的att（相当于已分配了一段memory）
+////在orb_advertise调用node_open(meta, data, true, instance, priority);  //advertiser为true，instance为nullptr
+////在orb_subscribe调用node_open(meta, nullptr, false); instance默认为nullptr, priority默认75
+// node_open就是打开meta对应的node（是一个obj目录下的文件）
 int uORB::Manager::node_open(const struct orb_metadata *meta, const void *data, bool advertiser, int *instance,
 			     int priority)
 {
@@ -363,6 +374,7 @@ int uORB::Manager::node_open(const struct orb_metadata *meta, const void *data, 
 	 * If meta is null, the object was not defined, i.e. it is not
 	 * known to the system.  We can't advertise/subscribe such a thing.
 	 */
+	// meta不能为null
 	if (nullptr == meta) {
 		errno = ENOENT;
 		return PX4_ERROR;
@@ -371,15 +383,19 @@ int uORB::Manager::node_open(const struct orb_metadata *meta, const void *data, 
 	/*
 	 * Advertiser must publish an initial value.
 	 */
+	// Advertiser的data不能为null，subscriber可以
 	if (advertiser && (data == nullptr)) {
 		errno = EINVAL;
 		return PX4_ERROR;
 	}
 
+	
+
 	/* if we have an instance and are an advertiser, we will generate a new node and set the instance,
 	 * so we do not need to open here */
 	if (!instance || !advertiser) {
 		/*
+		 * 根据meta和instance产生node位置和名称（由path记录node位置和node名称，path是名为/"obj"/meta->o_name+instance的文件名）
 		 * Generate the path to the node and try to open it.
 		 */
 		ret = uORB::Utils::node_mkpath(path, meta, instance);
@@ -390,6 +406,7 @@ int uORB::Manager::node_open(const struct orb_metadata *meta, const void *data, 
 		}
 
 		/* open the path as either the advertiser or the subscriber */
+		//根据是advertiser/subscriber来打开文件
 		fd = px4_open(path, advertiser ? PX4_F_WRONLY : PX4_F_RDONLY);
 
 	} else {

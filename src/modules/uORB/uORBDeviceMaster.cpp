@@ -67,6 +67,8 @@ uORB::DeviceMaster::DeviceMaster() :
 	_last_statistics_output = hrt_absolute_time();
 }
 
+
+//这个是DeviceMaster设备的iotcl
 int
 uORB::DeviceMaster::ioctl(cdev::file_t *filp, int cmd, unsigned long arg)
 {

@@ -43,7 +43,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-
+//orb的元数据
 /**
  * Object metadata.
  */
@@ -84,6 +84,7 @@ enum ORB_PRIO {
  *
  * @param _name		The name of the topic.
  */
+//获得指向uorb元数据的struct类型的pointer（就是结构体类型指针），其中__orb_##_name是orb_metadata的结构体
 #define ORB_ID(_name)		&__orb_##_name
 
 /**
@@ -91,6 +92,7 @@ enum ORB_PRIO {
  *
  * @param _name		The name of the topic.
  */
+// 在每个build时生成的msg.h中(比如actuator_armed.h)都会有ORB_DECLARE()，即定义一个orb_metadata
 #if defined(__cplusplus)
 # define ORB_DECLARE(_name)		extern "C" const struct orb_metadata __orb_##_name __EXPORT
 #else
@@ -111,6 +113,7 @@ enum ORB_PRIO {
  * @param _size_no_padding	Struct size w/o padding at the end
  * @param _fields	All fields in a semicolon separated list e.g: "float[3] position;bool armed"
  */
+// 为一个uorb topic的orb_metadata赋值
 #define ORB_DEFINE(_name, _struct, _size_no_padding, _fields)		\
 	const struct orb_metadata __orb_##_name = {	\
 		#_name,					\
@@ -131,6 +134,7 @@ __BEGIN_DECLS
  * a file-descriptor-based handle would not otherwise be in scope for the
  * publisher.
  */
+//orb_advert_t是全局的handle(fd类型的handle不一定在同一个scope中)，保证了不同位置的publisher
 typedef void 	*orb_advert_t;
 
 /**

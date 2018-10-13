@@ -118,6 +118,7 @@ public:
 	 *      ORB_DEFINE with no corresponding ORB_DECLARE)
 	 *      this function will return nullptr and set errno to ENOENT.
 	 */
+	//这个是uORB::Manager中的orb_advertise，被uORB.cpp中的orb_advertise调用。
 	orb_advert_t orb_advertise(const struct orb_metadata *meta, const void *data, unsigned int queue_size = 1)
 	{
 		return orb_advertise_multi(meta, data, nullptr, ORB_PRIO_DEFAULT, queue_size);

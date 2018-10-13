@@ -279,7 +279,7 @@ uORB::DeviceNode::write(cdev::file_t *filp, const char *buffer, size_t buflen)
 	}
 
 	/* Perform an atomic copy. */
-	ATOMIC_ENTER;
+	ATOMIC_ENTER;   //实际上是lock()
 	memcpy(_data + (_meta->o_size * (_generation % _queue_size)), buffer, _meta->o_size);
 
 	/* update the timestamp and generation count */
@@ -289,14 +289,16 @@ uORB::DeviceNode::write(cdev::file_t *filp, const char *buffer, size_t buflen)
 
 	_published = true;
 
-	ATOMIC_LEAVE;
+	ATOMIC_LEAVE;    //实际上是unlock()
 
 	/* notify any poll waiters */
+	// publish结束后通知所有的event waiter
 	poll_notify(POLLIN);
 
 	return _meta->o_size;
 }
 
+//这是DeviceNode设备的iotcl
 int
 uORB::DeviceNode::ioctl(cdev::file_t *filp, int cmd, unsigned long arg)
 {
@@ -391,10 +393,11 @@ uORB::DeviceNode::ioctl(cdev::file_t *filp, int cmd, unsigned long arg)
 	}
 }
 
+//调用例子:orb_publish(ORB_ID(vehicle_attitude),att_pub_fd,&att)
 ssize_t
 uORB::DeviceNode::publish(const orb_metadata *meta, orb_advert_t handle, const void *data)
 {
-	uORB::DeviceNode *devnode = (uORB::DeviceNode *)handle;
+	uORB::DeviceNode *devnode = (uORB::DeviceNode *)handle;   //把handle变成DeviceNode?
 	int ret;
 
 	/* check if the device handle is initialized */

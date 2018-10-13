@@ -40,6 +40,7 @@
 #include "uORBManager.hpp"
 #include "uORBCommon.hpp"
 
+//贴一个orb topic
 orb_advert_t orb_advertise(const struct orb_metadata *meta, const void *data)
 {
 	return uORB::Manager::get_instance()->orb_advertise(meta, data);

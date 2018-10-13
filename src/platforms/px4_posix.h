@@ -96,7 +96,7 @@ typedef struct {
 	/* Required for PX4 compatibility */
 	px4_sem_t   *sem;  	/* Pointer to semaphore used to post output event */
 	void   *priv;     	/* For use by drivers */
-} px4_pollfd_struct_t;
+} px4_pollfd_struct_t;   //px4_pollfd_struct_t就是pollfd
 
 __EXPORT int 		px4_open(const char *path, int flags, ...);
 __EXPORT int 		px4_close(int fd);

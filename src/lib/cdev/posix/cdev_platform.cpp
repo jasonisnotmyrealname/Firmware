@@ -67,6 +67,7 @@ volatile bool sim_delay = false;
 static map<string, void *> devmap;
 static cdev::file_t filemap[PX4_MAX_FD] = {};
 
+//extern "C"表示在g++编译该文件时，extern "C"后面的函数的symbol都是函数名（C++由于有重载，很多函数名称一样，因此在正常编译时，其symbol并不是函数名），这样就可以被其他的c文件link
 extern "C" {
 
 	int px4_errno;
@@ -315,6 +316,7 @@ extern "C" {
 		return ret;
 	}
 
+	//和px4_posix.h中的_GLOBAL poll、还有CDev.cpp中的int CDev::poll有什么关系?这部分函数前面加了extern "C"
 	int px4_poll(px4_pollfd_struct_t *fds, nfds_t nfds, int timeout)
 	{
 		if (nfds == 0) {

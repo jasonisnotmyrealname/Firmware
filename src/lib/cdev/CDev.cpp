@@ -34,7 +34,7 @@
 /**
  * @file CDev.cpp
  *
- * Character device base class.
+ * Character device base class. driver都继承自该基类
  */
 
 #include "CDev.hpp"
@@ -209,6 +209,7 @@ CDev::ioctl(file_t *filep, int cmd, unsigned long arg)
 	return ret;
 }
 
+
 int
 CDev::poll(file_t *filep, px4_pollfd_struct_t *fds, bool setup)
 {
@@ -326,8 +327,10 @@ CDev::poll(file_t *filep, px4_pollfd_struct_t *fds, bool setup)
 	return ret;
 }
 
+
+//通知所有的event waiter来取数据，这些waiter用_pollset来记录
 void
-CDev::poll_notify(pollevent_t events)
+CDev::poll_notify(pollevent_t events)  //在orb_publish中调用时，event是POLLIN  
 {
 	PX4_DEBUG("CDev::poll_notify events = %0x", events);
 
@@ -343,6 +346,7 @@ CDev::poll_notify(pollevent_t events)
 	ATOMIC_LEAVE;
 }
 
+//类似于c++11中的std::condition_variable::notify_one() ，通知相关的fds:events发生了
 void
 CDev::poll_notify_one(px4_pollfd_struct_t *fds, pollevent_t events)
 {
@@ -354,8 +358,8 @@ CDev::poll_notify_one(px4_pollfd_struct_t *fds, pollevent_t events)
 	PX4_DEBUG(" Events fds=%p %0x %0x %0x", fds, fds->revents, fds->events, events);
 
 	if (fds->revents != 0) {
-		px4_sem_post(fds->sem);
-	}
+		px4_sem_post(fds->sem);  //px4_sem_post就是sem_post，给信号量加1,表示资源空闲（poll_notify_one发生在publish的write之后）
+	}  //当有线程阻塞在这个信号量上时，调用这个函数会使其中的一个线程不再阻塞
 }
 
 int

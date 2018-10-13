@@ -107,7 +107,7 @@ uorb_main(int argc, char *argv[])
 		}
 
 		/* create the driver */
-		// 创建唯一的MasterNode实例，负责内部的设备节点的控制
+		// 创建唯一的 MasterNode 实例（_device_master），类内部维护一个 Nodemap 的数据结构?，所有的 DeviceNode 都会加入其中管理。
 		// 外部函数调用uORB时候都会通过uORB::Manger::get_instance()这个函数获取Manger的实例指针。这个函数是静态函数，根据判断命名空间中_Instance指针是否为空，确保全nameespace中只有这么一个Manger实例。
 		g_dev = uORB::Manager::get_instance()->get_device_master();  //get，如果没有就创建一个uORB::DeviceMaster并初始化(赋值到_device_master)，CDev位置在"/obj/_obj_"
 
