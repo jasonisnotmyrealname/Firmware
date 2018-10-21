@@ -1,3 +1,4 @@
+#sitl没有imu,nuttx下都是drivers/imu/mpu6000,poxix其他硬件下都是platforms/posix/drivers/df_mpu9250_wrapper...
 
 set(CMAKE_TOOLCHAIN_FILE ${PX4_SOURCE_DIR}/cmake/toolchains/Toolchain-native.cmake)
 

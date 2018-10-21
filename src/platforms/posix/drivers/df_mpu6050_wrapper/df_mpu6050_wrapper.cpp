@@ -36,6 +36,8 @@
  * Lightweight driver to access the MPU6050 of the DriverFramework.
  */
 
+//这种df wrapper只在posix环境下使用
+
 #include <px4_config.h>
 
 #include <sys/types.h>

@@ -41,6 +41,19 @@
  * @author Beat Küng <beat-kueng@gmx.net>
  */
 
+/*
+这层，主要是一个sensors.cpp，里面有陀螺，加速度计，气压，空速等传感器的值。这个函数对所有的传感器的原始值进行了滤波，然后发布。发布在sensor_combine主题里面，供其他函数调用。这个sensors.cpp里面关键的几个函数
+_voted_sensors_update.sensors_poll(raw);
+这个函数在拉取数据的同时，对数据进行了滤波，滤波就是上面提到的那个注释，其实这里还做了一个事情，就是机体坐标系的调整，也就是你的飞控在飞机里面的安装方向的问题。然后调用了下面的函数，选出几组传感器里面最好的数据。
+_accel.voter.get_best(hrt_absolute_time(), &best_index);
+最后通过
+orb_publish(ORB_ID(sensor_combined), _sensor_pub, &raw);
+将所有传感器的数据发布出去了。
+为什么要把上面的sensors.cpp归类为中间层，我的理解是，他还是在为核心应用准备数据。
+作者：周大有
+链接：https://www.jianshu.com/p/5f50a90c6922
+*/
+
 #include <board_config.h>
 
 #include <px4_config.h>

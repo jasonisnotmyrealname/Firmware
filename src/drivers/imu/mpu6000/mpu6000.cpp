@@ -128,7 +128,7 @@ enum MPU6000_BUS {
 	MPU6000_BUS_SPI_EXTERNAL2
 };
 
-class MPU6000_gyro;
+class MPU6000_gyro;   //预先声明MPU6000_gyro，因为MPU6000要引用它作为友元
 
 class MPU6000 : public device::CDev
 {
@@ -1297,13 +1297,13 @@ MPU6000::ioctl(struct file *filp, int cmd, unsigned long arg)
 			case SENSOR_POLLRATE_MAX:
 				return ioctl(filp, SENSORIOCSPOLLRATE, 1000);
 
-			case SENSOR_POLLRATE_DEFAULT:
-				return ioctl(filp, SENSORIOCSPOLLRATE, MPU6000_ACCEL_DEFAULT_RATE);
+			case SENSOR_POLLRATE_DEFAULT:   //在init()中执行
+				return ioctl(filp, SENSORIOCSPOLLRATE, MPU6000_ACCEL_DEFAULT_RATE);   //仍然是调用ioctl,进入到下面的default中
 
 			/* adjust to a legal polling interval in Hz */
 			default: {
 					/* do we need to start internal polling? */
-					bool want_start = (_call_interval == 0);
+					bool want_start = (_call_interval == 0);   //创建MPU6000类时为0
 
 					/* convert hz to hrt interval via microseconds */
 					unsigned ticks = 1000000 / arg;
@@ -1343,7 +1343,7 @@ MPU6000::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 					/* if we need to start the poll state machine, do it */
 					if (want_start) {
-						start();
+						start();   //启动work_queue或者hrt_call_every
 					}
 
 					return OK;
@@ -1595,7 +1595,7 @@ MPU6000::start()
 		hrt_call_every(&_call,
 			       1000,
 			       _call_interval - MPU6000_TIMER_REDUCTION,
-			       (hrt_callout)&MPU6000::measure_trampoline, this);
+			       (hrt_callout)&MPU6000::measure_trampoline, this);   //通过定时器定时回调measure_trampoline,在measure_trampoline里面，通过spi总线读取了陀螺和加速度计的值，最后通过sensor_accel和sensor_gyro主题发布读到的数据。
 
 	} else {
 #ifdef USE_I2C
@@ -2153,7 +2153,7 @@ struct mpu6000_bus_option {
 #endif
 };
 
-#define NUM_BUS_OPTIONS (sizeof(bus_options)/sizeof(bus_options[0]))
+#define NUM_BUS_OPTIONS (sizeof(bus_options)/sizeof(bus_options[0]))   //获得bus_options的数量
 
 
 void	start(enum MPU6000_BUS busid, enum Rotation rotation, int range, int device_type);
