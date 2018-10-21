@@ -60,6 +60,7 @@ include(common/px4_base)
 #
 #	Example:
 #		px4_add_git_submodule(TARGET git_nuttx PATH "NuttX")
+#       px4_add_git_submodule(TARGET git_gps_devices PATH "devices")
 #
 function(px4_add_git_submodule)
 	px4_parse_function_args(

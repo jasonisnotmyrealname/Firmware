@@ -68,7 +68,7 @@ uORB::DeviceMaster::DeviceMaster() :
 }
 
 
-//这个是DeviceMaster设备的iotcl
+//这个是DeviceMaster设备的iotcl,ORBIOCADVERTISE等是和DeviceNode约定好的指令
 int
 uORB::DeviceMaster::ioctl(cdev::file_t *filp, int cmd, unsigned long arg)
 {

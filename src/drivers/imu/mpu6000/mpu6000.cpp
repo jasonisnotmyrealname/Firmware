@@ -109,6 +109,7 @@
  */
 #define MPU6000_TIMER_REDUCTION				200
 
+//MPU信号类型
 enum MPU_DEVICE_TYPE {
 	MPU_DEVICE_TYPE_MPU6000	= 6000,
 	MPU_DEVICE_TYPE_ICM20602 = 20602,
@@ -116,6 +117,7 @@ enum MPU_DEVICE_TYPE {
 	MPU_DEVICE_TYPE_ICM20689 = 20689
 };
 
+//MPU6000_BUS包含了MPU6000的几种总线形式:I2C/SPI、INTERNAL/EXTERNAL
 enum MPU6000_BUS {
 	MPU6000_BUS_ALL = 0,
 	MPU6000_BUS_I2C_INTERNAL,
@@ -162,7 +164,7 @@ protected:
 
 	virtual int		probe();
 
-	friend class MPU6000_gyro;
+	friend class MPU6000_gyro;   //和gyro互为友元
 
 	virtual ssize_t		gyro_read(struct file *filp, char *buffer, size_t buflen);
 	virtual int		gyro_ioctl(struct file *filp, int cmd, unsigned long arg);
@@ -464,7 +466,7 @@ MPU6000::MPU6000(device::Device *interface, const char *path_accel, const char *
 	CDev("MPU6000", path_accel),
 	_interface(interface),
 	_device_type(device_type),
-	_gyro(new MPU6000_gyro(this, path_gyro)),
+	_gyro(new MPU6000_gyro(this, path_gyro)),   //创建MPU6000的对象的同时，创建一个MPU6000_gyro
 	_product(0),
 #if defined(USE_I2C)
 	_work {},
@@ -1732,7 +1734,7 @@ MPU6000::check_registers(void)
 }
 
 int
-MPU6000::measure()
+MPU6000::measure()   //读取数据
 {
 	perf_count(_measure_interval);
 
@@ -1767,6 +1769,7 @@ MPU6000::measure()
 
 	// sensor transfer at high clock speed
 
+	//_interface是一个Device类型的指针，其中的read是一个虚函数
 	if (sizeof(mpu_report) != _interface->read(MPU6000_SET_SPEED(MPUREG_INT_STATUS, MPU6000_HIGH_BUS_SPEED),
 			(uint8_t *)&mpu_report,
 			sizeof(mpu_report))) {
@@ -2110,11 +2113,11 @@ struct mpu6000_bus_option {
 	MPU_DEVICE_TYPE device_type;
 	const char *accelpath;
 	const char *gyropath;
-	MPU6000_constructor interface_constructor;
+	MPU6000_constructor interface_constructor;   //MPU6000_constructor就是device::Device
 	uint8_t busnum;
 	bool external;
 	MPU6000	*dev;
-} bus_options[] = {
+} bus_options[] = {   //bus_options是一个struct组
 #if defined (USE_I2C)
 #	if defined(PX4_I2C_BUS_ONBOARD)
 	{ MPU6000_BUS_I2C_INTERNAL, MPU_DEVICE_TYPE_MPU6000, MPU_DEVICE_PATH_ACCEL, MPU_DEVICE_PATH_GYRO,  &MPU6000_I2C_interface, PX4_I2C_BUS_ONBOARD, false, NULL },
@@ -2193,7 +2196,18 @@ start_bus(struct mpu6000_bus_option &bus, enum Rotation rotation, int range, int
 		return false;
 	}
 
+	//interface在后面赋值给bus.dev的_interface,创建一个device::Device类型的interface
 	device::Device *interface = bus.interface_constructor(bus.busnum, device_type, bus.external);
+    /*
+     * 确定设备接口Interface(很重要),假设:
+     * busid = MPU6000_BUS_SPI_INTERNAL
+     * accelpath = MPU_DEVICE_PATH_ACCEL(/dev/accel)
+     * gyropath = MPU_DEVICE_PATH_GYRO(/dev/gyro)
+     * interface_constructor =  MPU6000的内部SPI片选(作为SPI类的加速度计实例)
+     * busnum = PX4_SPI_BUS_SENSORS(Pixhawk传感器连在SPI1上)
+     * dev = 是否存在设备连接在此端口上
+     */
+
 
 	if (interface == nullptr) {
 		warnx("failed creating interface for bus #%u (SPI%u)", (unsigned)bus.busid, (unsigned)bus.busnum);
@@ -2206,6 +2220,7 @@ start_bus(struct mpu6000_bus_option &bus, enum Rotation rotation, int range, int
 		return false;
 	}
 
+	// 创建一个mpu6000类，interface负责总线接口，MPU6000包括了对加速度计accel和陀螺gyro的操作
 	bus.dev = new MPU6000(interface, bus.accelpath, bus.gyropath, rotation, device_type);
 
 	if (bus.dev == nullptr) {
@@ -2213,13 +2228,13 @@ start_bus(struct mpu6000_bus_option &bus, enum Rotation rotation, int range, int
 		return false;
 	}
 
-	if (OK != bus.dev->init()) {
+	if (OK != bus.dev->init()) {   //初始化设备，打开CDev设备，配置ringbuffer等
 		goto fail;
 	}
 
 	/* set the poll rate to default, starts automatic data collection */
 
-	fd = open(bus.accelpath, O_RDONLY);
+	fd = open(bus.accelpath, O_RDONLY);   //只打开accel的路径(MPU6000类默认是加速度计的，陀螺的类是MPU6000_gyro)
 
 	if (fd < 0) {
 		goto fail;
@@ -2263,6 +2278,7 @@ start(enum MPU6000_BUS busid, enum Rotation rotation, int range, int device_type
 
 	bool started = false;
 
+	//在定义好的bus中遍历，启动相应的bus
 	for (unsigned i = 0; i < NUM_BUS_OPTIONS; i++) {
 		if (busid == MPU6000_BUS_ALL && bus_options[i].dev != NULL) {
 			// this device is already started
@@ -2495,11 +2511,13 @@ mpu6000_main(int argc, char *argv[])
 	int ch;
 	const char *myoptarg = nullptr;
 
-	enum MPU6000_BUS busid = MPU6000_BUS_ALL;
-	int device_type = MPU_DEVICE_TYPE_MPU6000;
-	enum Rotation rotation = ROTATION_NONE;
-	int accel_range = MPU6000_ACCEL_DEFAULT_RANGE_G;
+	//定义器件的默认参数
+	enum MPU6000_BUS busid = MPU6000_BUS_ALL;  //定义总线
+	int device_type = MPU_DEVICE_TYPE_MPU6000;  //定义型号
+	enum Rotation rotation = ROTATION_NONE;  //定义旋转
+	int accel_range = MPU6000_ACCEL_DEFAULT_RANGE_G;   //定义加速度范围
 
+	//获得cmd参数，更改器件参数
 	while ((ch = px4_getopt(argc, argv, "T:XISsZzR:a:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'X':
@@ -2549,6 +2567,7 @@ mpu6000_main(int argc, char *argv[])
 		return -1;
 	}
 
+	//参数中的"动作参数":start/stop/test/reset/info/status等
 	const char *verb = argv[myoptind];
 
 	/*

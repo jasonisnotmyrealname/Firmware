@@ -85,17 +85,19 @@ typedef struct {
 	// strings are allocated after the struct data
 } pthdata_t;
 
+
+//入口函数adapter
 static void *entry_adapter(void *ptr)
 {
 	pthdata_t *data = (pthdata_t *) ptr;
 
 	int rv;
 
-	// set the threads name
+	// set the threads name，给线程命名，比如gps driver的线程名称就叫gps
 #ifdef __PX4_DARWIN
 	rv = pthread_setname_np(data->name);
 #else
-	rv = pthread_setname_np(pthread_self(), data->name);
+	rv = pthread_setname_np(pthread_self(), data->name);   
 #endif
 
 	if (rv) {
@@ -118,7 +120,7 @@ px4_systemreset(bool to_bootloader)
 	system_exit(0);
 }
 
-//作为OS中间层，该函数用于在线程池(taskmap)中产生新的thread/task(?)，在driver/module中被大量使用
+//作为OS中间层，主要作用是管理线程池（最多50个线程），在driver/module中被大量使用。
 px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int stack_size, px4_main_t entry,
 			      char *const argv[])
 {
@@ -129,7 +131,7 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 	struct sched_param param = {};
 	char *p = (char *)argv;
 
-	// Calculate argc
+	// Calculate argc  计算argv对应的argc
 	while (p != (char *)nullptr) {
 		p = argv[argc];
 
@@ -138,9 +140,10 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 		}
 
 		++argc;
-		len += strlen(p) + 1;
+		len += strlen(p) + 1;   //len是argv的总长度
 	}
 
+	//计算 taskdata 的长度
 	unsigned long structsize = sizeof(pthdata_t) + (argc + 1) * sizeof(char *);
 
 	// not safe to pass stack data to the thread creation 
@@ -148,9 +151,10 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 	memset(taskdata, 0, structsize + len);
 	unsigned long offset = ((unsigned long)taskdata) + structsize;
 
+	// 初始化taskdata，记录module名称，entry函数
 	strncpy(taskdata->name, name, 16);
 	taskdata->name[15] = 0;
-	taskdata->entry = entry;
+	taskdata->entry = entry;  
 	taskdata->argc = argc;
 
 	for (i = 0; i < argc; i++) {
@@ -231,7 +235,7 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 
 	px4_task_t taskid = 0;
 
-	//创建最多50个线程
+	//创建最多50个线程。这里先再taskmap中找到一个空闲的线程，记录他的id
 	for (i = 0; i < PX4_MAX_TASKS; ++i) {
 		if (!taskmap[i].isused) {
 			taskmap[i].name = name;

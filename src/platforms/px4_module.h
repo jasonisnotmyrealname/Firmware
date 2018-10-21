@@ -109,6 +109,7 @@ extern pthread_mutex_t px4_modules_mutex;
  *              // on error return != 0 (and _task_id must be -1)
  *      }
  */
+//所有module都套用这个模板，实现基本的功能:start stop status 等等,start又包括 start_command_base -> T::task_spawn -> run_trampoline
 template<class T>
 class ModuleBase
 {
@@ -163,6 +164,7 @@ public:
 	 * @param argc Pointer to the task argument variable array.
 	 * @return Returns 0 iff successful, -1 otherwise.
 	 */
+	// px4_task_spawn_cmd的入口函数，主要是例化对象->run()
 	static int run_trampoline(int argc, char *argv[])
 	{
 		int ret = 0;
@@ -196,6 +198,7 @@ public:
 	 * @param argc Pointer to the task argument variable array.
 	 * @return Returns 0 iff successful, -1 otherwise.
 	 */
+	//启动module
 	static int start_command_base(int argc, char *argv[])
 	{
 		int ret = 0;

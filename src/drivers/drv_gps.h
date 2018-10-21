@@ -53,7 +53,7 @@
 
 typedef enum {
 	GPS_DRIVER_MODE_NONE = 0,
-	GPS_DRIVER_MODE_UBX,
-	GPS_DRIVER_MODE_MTK,
-	GPS_DRIVER_MODE_ASHTECH
-} gps_driver_mode_t;
+	GPS_DRIVER_MODE_UBX,   //ubx协议:u-blox定义的
+	GPS_DRIVER_MODE_MTK,    //MTK
+	GPS_DRIVER_MODE_ASHTECH   //ASHTECH:gps厂商
+} gps_driver_mode_t;   //px4的gps一般就用这3种厂商的

@@ -3,18 +3,18 @@ set(CMAKE_TOOLCHAIN_FILE ${PX4_SOURCE_DIR}/cmake/toolchains/Toolchain-native.cma
 
 set(config_module_list
 	#drivers/barometer
-#	drivers/differential_pressure  #不能删除 依赖drivers__airspeed
+#	drivers/differential_pressure  #依赖drivers__airspeed
 #	drivers/distance_sensor
 	#drivers/telemetry
 
 #	drivers/batt_smbus
 #	drivers/camera_trigger
-#	drivers/gps
+	drivers/gps
 #	drivers/linux_gpio
 #	drivers/pwm_out_sim
 #	drivers/vmount
 
-#	modules/sensors  #不能删除 依赖airspeed/battery/conversion/drivers__device/git_ecl/ecl_validation/mathlib
+#	modules/sensors  #依赖airspeed/battery/conversion/drivers__device/git_ecl/ecl_validation/mathlib
 
 #	platforms/posix/drivers/tonealrmsim
 
@@ -61,13 +61,13 @@ set(config_module_list
 	# General system control
 	#
 #	modules/camera_feedback
-#	modules/commander   #不能删, 依赖circuit_breaker/df_driver_framework/git_ecl/ecl_geo
+#	modules/commander   #依赖circuit_breaker/df_driver_framework/git_ecl/ecl_geo
 #	modules/events
 	#modules/gpio_led
 #	modules/land_detector
 #	modules/load_mon
-#	modules/mavlink   #不能删，依赖airspeed/git_mavlink_v2/conversion/git_ecl/ecl_geo/version
-#	modules/navigator    #不能删,依赖git_ecl/ecl_geo/landing_slope
+#	modules/mavlink   #依赖airspeed/git_mavlink_v2/conversion/git_ecl/ecl_geo/version
+#	modules/navigator    #依赖git_ecl/ecl_geo/landing_slope
 #	modules/replay
 #	modules/simulator
 	#modules/uavcan
@@ -89,19 +89,19 @@ set(config_module_list
 #	modules/gnd_att_control
 #	modules/gnd_pos_control
 #	modules/mc_att_control
-#	modules/mc_pos_control   #不能删 依赖controllib/FlightTasks/git_ecl/ecl_geo
-#	modules/vtol_att_control    #不能删 依赖pwm_limit
+#	modules/mc_pos_control   #依赖controllib/FlightTasks/git_ecl/ecl_geo
+#	modules/vtol_att_control    #依赖pwm_limit
 
 	#
 	# Logging
 	#
-#	modules/logger   #可能是可以删除的
+#	modules/logger  
 
 	#
 	# Library modules
 	#
-#	modules/dataman  #不能删 无依赖项
-#	modules/landing_target_estimator  #不能删 无依赖项
+#	modules/dataman  
+#	modules/landing_target_estimator  
  
 	#
 	# OBC challenge

@@ -39,6 +39,7 @@
 
 #pragma once
 
+//PX4_I2C_MPU6000_ADDR这些在board_config.h中定义
 #if defined(PX4_I2C_MPU6050_ADDR) || \
 	defined(PX4_I2C_MPU6000_ADDR) || \
 	defined(PX4_I2C_ICM_20608_G_ADDR)

@@ -307,6 +307,7 @@ GPS::~GPS()
 
 }
 
+//gps的回调函数，由不同型号的gps driver(helper)的read/write函数调用
 int GPS::callback(GPSCallbackType type, void *data1, int data2, void *user)
 {
 	GPS *gps = (GPS *)user;
@@ -590,6 +591,8 @@ void GPS::dumpGpsData(uint8_t *data, size_t len, bool msg_to_gps_device)
 	}
 }
 
+
+//gps程序运行，例化不同型号的gps的对象
 void
 GPS::run()
 {
@@ -603,7 +606,7 @@ GPS::run()
 		}
 	}
 
-	param_t handle = param_find("GPS_YAW_OFFSET");
+	param_t handle = param_find("GPS_YAW_OFFSET");  //zjx:?
 	float heading_offset = 0.f;
 
 	if (handle != PARAM_INVALID) {
@@ -625,10 +628,10 @@ GPS::run()
 		param_get(handle, &configured_baudrate);
 	}
 
-
+	//订阅gps_inject_data,这个是要向gps发送的
 	_orb_inject_data_fd = orb_subscribe(ORB_ID(gps_inject_data));
 
-	initializeCommunicationDump();
+	initializeCommunicationDump();   //准备好dump gps数据
 
 	uint64_t last_rate_measurement = hrt_absolute_time();
 	unsigned last_rate_count = 0;
@@ -636,7 +639,7 @@ GPS::run()
 	/* loop handling received serial bytes and also configuring in between */
 	while (!should_exit()) {
 
-		if (_fake_gps) {
+		if (_fake_gps) {   //fake_gps 在 test或者sitl的时候用?
 			_report_gps_pos.timestamp = hrt_absolute_time();
 			_report_gps_pos.lat = (int32_t)47.378301e7f;
 			_report_gps_pos.lon = (int32_t)8.538777e7f;
@@ -674,7 +677,7 @@ GPS::run()
 
 			switch (_mode) {
 			case GPS_DRIVER_MODE_NONE:
-				_mode = GPS_DRIVER_MODE_UBX;
+				_mode = GPS_DRIVER_MODE_UBX;   //默认的make posix_sitl_default为什么是GPS_DRIVER_MODE_MTK?
 
 			/* FALLTHROUGH */
 			case GPS_DRIVER_MODE_UBX:
@@ -683,7 +686,7 @@ GPS::run()
 				break;
 
 			case GPS_DRIVER_MODE_MTK:
-				_helper = new GPSDriverMTK(&GPS::callback, this, &_report_gps_pos);
+				_helper = new GPSDriverMTK(&GPS::callback, this, &_report_gps_pos); 
 				break;
 
 			case GPS_DRIVER_MODE_ASHTECH:
@@ -710,6 +713,7 @@ GPS::run()
 
 				int helper_ret;
 
+				//接收gps数据->在uorb上发布
 				while ((helper_ret = _helper->receive(TIMEOUT_5HZ)) > 0 && !should_exit()) {
 
 					if (helper_ret & 1) {
@@ -767,7 +771,7 @@ GPS::run()
 				}
 			}
 
-			if (_mode_auto) {
+			if (_mode_auto) {   //自动模式就是每个driver都试一遍?
 				switch (_mode) {
 				case GPS_DRIVER_MODE_UBX:
 					_mode = GPS_DRIVER_MODE_MTK;
@@ -948,6 +952,7 @@ $ gps start -f
 	return 0;
 }
 
+//启动主线程
 int GPS::task_spawn(int argc, char *argv[])
 {
 	return task_spawn(argc, argv, Instance::Main);
@@ -956,12 +961,14 @@ int GPS::task_spawn(int argc, char *argv[])
 int GPS::task_spawn(int argc, char *argv[], Instance instance)
 {
 	px4_main_t entry_point;
+	//获得run_trampoline的入口地址:run_trampoline的任务包括创建gps对象和run
 	if (instance == Instance::Main) {
 		entry_point = (px4_main_t)&run_trampoline;
 	} else {
 		entry_point = (px4_main_t)&run_trampoline_secondary;
 	}
 
+	//为entry_point创建线程，设置优先级
 	int task_id = px4_task_spawn_cmd("gps", SCHED_DEFAULT,
 				   SCHED_PRIORITY_SLOW_DRIVER, 1630,
 				   entry_point, (char *const *)argv);
@@ -997,18 +1004,19 @@ int GPS::run_trampoline_secondary(int argc, char *argv[])
 	}
 	return 0;
 }
+
+//例化一个gps对象
 GPS *GPS::instantiate(int argc, char *argv[])
 {
 	return instantiate(argc, argv, Instance::Main);
 }
-
 GPS *GPS::instantiate(int argc, char *argv[], Instance instance)
 {
-	const char *device_name = GPS_DEFAULT_UART_PORT;
+	const char *device_name = GPS_DEFAULT_UART_PORT;   //gps的默认uart端口
 	const char *device_name_secondary = nullptr;
 	bool fake_gps = false;
 	bool enable_sat_info = false;
-	GPSHelper::Interface interface = GPSHelper::Interface::UART;
+	GPSHelper::Interface interface = GPSHelper::Interface::UART;  //gps接口默认是uart
 	gps_driver_mode_t mode = GPS_DRIVER_MODE_NONE;
 
 	bool error_flag = false;
@@ -1016,6 +1024,7 @@ GPS *GPS::instantiate(int argc, char *argv[], Instance instance)
 	int ch;
 	const char *myoptarg = nullptr;
 
+	//在rcs中，一般这样启动:gps start -d /dev/ttyS0
 	while ((ch = px4_getopt(argc, argv, "d:e:fsi:p:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'd':
@@ -1078,6 +1087,7 @@ GPS *GPS::instantiate(int argc, char *argv[], Instance instance)
 		return nullptr;
 	}
 
+	//例化一个对象
 	GPS *gps;
 	if (instance == Instance::Main) {
 		gps = new GPS(device_name, mode, interface, fake_gps, enable_sat_info, instance);
@@ -1097,10 +1107,9 @@ GPS *GPS::instantiate(int argc, char *argv[], Instance instance)
 				PX4_ERR("Timed out while waiting for thread to start");
 			}
 		}
-	} else { // secondary instance
+	} else { // secondary instance:这是第二个gps对象
 		gps = new GPS(device_name_secondary, mode, interface, fake_gps, enable_sat_info, instance);
 	}
-
 	return gps;
 }
 
