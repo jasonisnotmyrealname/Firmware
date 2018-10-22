@@ -313,7 +313,7 @@ int DfMpu9250Wrapper::start()
 	}
 
 	/* Init device and start sensor. */
-	int ret = init();
+	int ret = init();   //没找到init()????
 
 	if (ret != 0) {
 		PX4_ERR("MPU9250 init fail: %d", ret);
@@ -792,7 +792,8 @@ int stop();
 int info();
 void usage();
 
-int start(bool mag_enabled, enum Rotation rotation)
+//这个start是df_mpu9250_wrapper这个namespace下的启动函数，区别与DfMpu9250Wrapper类的start
+int start(bool mag_enabled, enum Rotation rotation)   //"start"对应的mag_enabled是"true"
 {
 	g_dev = new DfMpu9250Wrapper(mag_enabled, rotation);
 
@@ -870,6 +871,7 @@ usage()
 } // namespace df_mpu9250_wrapper
 
 
+//入口函数
 int
 df_mpu9250_wrapper_main(int argc, char *argv[])
 {
