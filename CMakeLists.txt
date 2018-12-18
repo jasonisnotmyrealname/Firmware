@@ -388,7 +388,7 @@ endif()
 # subdirectories
 #
 add_library(parameters_interface INTERFACE)
-add_subdirectory(src/lib EXCLUDE_FROM_ALL)
+add_subdirectory(src/lib EXCLUDE_FROM_ALL)   #原来是(src/lib EXCLUDE_FROM_ALL)
 add_subdirectory(src/platforms/common EXCLUDE_FROM_ALL)
 add_subdirectory(src/modules/systemlib EXCLUDE_FROM_ALL) # TODO: split into libraries in platform layer
 add_subdirectory(src/modules/uORB EXCLUDE_FROM_ALL) # TODO: platform layer

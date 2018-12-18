@@ -3,14 +3,14 @@
 set(CMAKE_TOOLCHAIN_FILE ${PX4_SOURCE_DIR}/cmake/toolchains/Toolchain-native.cmake)
 
 set(config_module_list
-	#drivers/barometer
+#	drivers/barometer
 #	drivers/differential_pressure  #依赖drivers__airspeed
 #	drivers/distance_sensor
-	#drivers/telemetry
+#	drivers/telemetry
 
 #	drivers/batt_smbus
 #	drivers/camera_trigger
-	drivers/gps
+#	drivers/gps
 #	drivers/linux_gpio
 #	drivers/pwm_out_sim
 #	drivers/vmount
@@ -51,7 +51,7 @@ set(config_module_list
 #	modules/commander/commander_tests
 #	lib/controllib/controllib_test
 #	modules/mavlink/mavlink_tests
-	modules/uORB/uORB_tests
+#	modules/uORB/uORB_tests
 #	systemcmds/tests
 
 #	platforms/posix/tests/hello
@@ -62,12 +62,12 @@ set(config_module_list
 	# General system control
 	#
 #	modules/camera_feedback
-#	modules/commander   #依赖circuit_breaker/df_driver_framework/git_ecl/ecl_geo
+#	modules/commander   #DEPENDS circuit_breaker/df_driver_framework/git_ecl/ecl_geo.依赖与sensors
 #	modules/events
 	#modules/gpio_led
 #	modules/land_detector
 #	modules/load_mon
-#	modules/mavlink   #依赖airspeed/git_mavlink_v2/conversion/git_ecl/ecl_geo/version
+	modules/mavlink   #依赖dataman. Mavlink也是一个单独维护的仓库
 #	modules/navigator    #依赖git_ecl/ecl_geo/landing_slope
 #	modules/replay
 #	modules/simulator
@@ -101,7 +101,7 @@ set(config_module_list
 	#
 	# Library modules
 	#
-#	modules/dataman  
+	modules/dataman  
 #	modules/landing_target_estimator  
  
 	#
@@ -160,4 +160,5 @@ if(REPLAY_FILE)
 	message("Building with uorb publisher rules support")
 	add_definitions(-DORB_USE_PUBLISHER_RULES)
 endif()
+
 

@@ -2665,7 +2665,7 @@ void MavlinkReceiver::print_status()
 
 void *MavlinkReceiver::start_helper(void *context)
 {
-
+	//将context作为parent参数传递给rcv
 	MavlinkReceiver *rcv = new MavlinkReceiver((Mavlink *)context);
 
 	if (!rcv) {
@@ -2681,6 +2681,7 @@ void *MavlinkReceiver::start_helper(void *context)
 }
 
 //下面的pthread_attr_init、pthread_attr_getschedparam都是linux中多线程的函数
+//这里创建了一个接收数据的thread（在thread中，用MavlinkReceiver::start_helper创建MavlinkReceiver对象），将parent参数传递给这个thread
 void
 MavlinkReceiver::receive_start(pthread_t *thread, Mavlink *parent)
 {

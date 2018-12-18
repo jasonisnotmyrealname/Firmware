@@ -105,6 +105,8 @@
 #include <uORB/topics/vehicle_magnetometer.h>
 #include <uORB/uORB.h>
 
+#include <iostream>   //zjx
+
 using matrix::wrap_2pi;
 
 static uint16_t cm_uint16_from_m_float(float m);
@@ -4510,6 +4512,8 @@ protected:
 	}
 };
 
+
+// 所有要发送的消息，都要在这里写下
 static const StreamListItem streams_list[] = {
 	StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static, &MavlinkStreamHeartbeat::get_id_static),
 	StreamListItem(&MavlinkStreamStatustext::new_instance, &MavlinkStreamStatustext::get_name_static, &MavlinkStreamStatustext::get_id_static),
@@ -4584,9 +4588,9 @@ MavlinkStream *create_mavlink_stream(const char *stream_name, Mavlink *mavlink)
 {
 	// search for stream with specified name in supported streams list
 	if (stream_name != nullptr) {
-		for (const auto &stream : streams_list) {
-			if (strcmp(stream_name, stream.get_name()) == 0) {
-				return stream.new_instance(mavlink);
+		for (const auto &stream : streams_list) {   //streams_list包括了所有预先定义的mavlink消息
+			if (strcmp(stream_name, stream.get_name()) == 0) {   //如果stream_name在streams_list中，表示合法，可以创建
+				return stream.new_instance(mavlink);   //在streams_list中找到stream_name，并创建相应的MavlinkStream对象(比如MavlinkStreamHeartbeat)   
 			}
 		}
 	}

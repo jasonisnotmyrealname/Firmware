@@ -48,6 +48,7 @@ public:
 
 	// no copy, assignment, move, move assignment
 	// 参考https://stackoverflow.com/questions/5513881/meaning-of-delete-after-function-declaration
+	// = delete用于“禁止”
 	ListNode(const ListNode &) = delete;
 	ListNode &operator=(const ListNode &) = delete;
 	ListNode(ListNode &&) = delete;

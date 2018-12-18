@@ -43,6 +43,7 @@
 
 #include "mavlink_stream.h"
 #include "mavlink_main.h"
+#include <iostream>
 
 MavlinkStream::MavlinkStream(Mavlink *mavlink) :
 	_mavlink(mavlink)
@@ -56,19 +57,20 @@ MavlinkStream::MavlinkStream(Mavlink *mavlink) :
 int
 MavlinkStream::update(const hrt_abstime &t)
 {
-	update_data();
+//	std::cout << "mavlink send data!!!!!!" << std::endl;  //zjx debug
+	update_data();   //在common.xml的各个消息中没有这个函数
 
 	// If the message has never been sent before we want
 	// to send it immediately and can return right away
-	if (_last_sent == 0) {
+	if (_last_sent == 0) {   //_last_sent是hrt_abstime时间类型，=0表示第一次发送
 		// this will give different messages on the same run a different
 		// initial timestamp which will help spacing them out
 		// on the link scheduling
-		if (send(t)) {
+		if (send(t)) {    //发送数据，send是common.xml的各个消息(.h文件)中重新定义的send
 			_last_sent = hrt_absolute_time();
 
 			if (!_first_message_sent) {
-				_first_message_sent = true;
+				_first_message_sent = true;   //置第一次发送的标志位
 			}
 		}
 

@@ -113,10 +113,10 @@ public:
 	void reset_last_sent() { _last_sent = 0; }
 
 protected:
-	Mavlink      *const _mavlink;
+	Mavlink      *const _mavlink;   //每个stream都必须和一个mavlink对象对应
 	int _interval{1000000};		///< if set to negative value = unlimited rate
 
-	virtual bool send(const hrt_abstime t) = 0;
+	virtual bool send(const hrt_abstime t) = 0;   //由mavlink_message.cpp中的各个MavlinkStream的send函数重新定义
 
 	/**
 	 * Function to collect/update data for the streams at a high rate independant of

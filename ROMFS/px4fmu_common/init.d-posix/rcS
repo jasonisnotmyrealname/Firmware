@@ -210,7 +210,7 @@ fi
 #
 sh etc/init.d/rc.vehicle_setup
 
-# 启动mavlink，和GCS连接
+# 启动mavlink，和GCS连接(通过udp，而不是uart)
 # GCS link
 # -r表示rate，-s表示stream_name，-u表示network_port
 mavlink start -x -u $udp_gcs_port_local -r 4000000
