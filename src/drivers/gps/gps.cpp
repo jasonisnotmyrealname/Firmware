@@ -968,7 +968,7 @@ int GPS::task_spawn(int argc, char *argv[], Instance instance)
 		entry_point = (px4_main_t)&run_trampoline_secondary;
 	}
 
-	//为entry_point创建线程，设置优先级
+	//为entry_point创建线程，设置优先级 
 	int task_id = px4_task_spawn_cmd("gps", SCHED_DEFAULT,
 				   SCHED_PRIORITY_SLOW_DRIVER, 1630,
 				   entry_point, (char *const *)argv);

@@ -106,7 +106,7 @@ public:
 	 *
 	 * @return		OK on success.
 	 */
-	static int		start(int argc, char *argv[]);
+	static int		start(int argc, char *argv[]);   //定义为static，不需要例化就可以启动
 
 	/**
 	 * Display the mavlink status.

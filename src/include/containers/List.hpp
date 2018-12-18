@@ -47,6 +47,7 @@ public:
 	virtual ~ListNode() = default;
 
 	// no copy, assignment, move, move assignment
+	// 参考https://stackoverflow.com/questions/5513881/meaning-of-delete-after-function-declaration
 	ListNode(const ListNode &) = delete;
 	ListNode &operator=(const ListNode &) = delete;
 	ListNode(ListNode &&) = delete;

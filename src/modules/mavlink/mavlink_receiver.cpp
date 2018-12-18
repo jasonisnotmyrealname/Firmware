@@ -2680,6 +2680,7 @@ void *MavlinkReceiver::start_helper(void *context)
 	return ret;
 }
 
+//下面的pthread_attr_init、pthread_attr_getschedparam都是linux中多线程的函数
 void
 MavlinkReceiver::receive_start(pthread_t *thread, Mavlink *parent)
 {
@@ -2687,7 +2688,7 @@ MavlinkReceiver::receive_start(pthread_t *thread, Mavlink *parent)
 	pthread_attr_init(&receiveloop_attr);
 
 	struct sched_param param;
-	(void)pthread_attr_getschedparam(&receiveloop_attr, &param);
+	(void)pthread_attr_getschedparam(&receiveloop_attr, &param); 
 	param.sched_priority = SCHED_PRIORITY_MAX - 80;
 	(void)pthread_attr_setschedparam(&receiveloop_attr, &param);
 

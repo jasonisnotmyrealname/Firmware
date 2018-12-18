@@ -170,7 +170,7 @@ px4_task_t px4_task_spawn_cmd(const char *name, int scheduler, int priority, int
 	PX4_DEBUG("starting task %s", name);
 
 	pthread_attr_t attr;  //pthread_attr_t主要包括scope属性、detach属性、堆栈地址、堆栈大小、优先级。
-	int rv = pthread_attr_init(&attr);
+	int rv = pthread_attr_init(&attr);  //posix中的pthread_attr_init:作用是初始化一个线程对象的属性
 
 	if (rv != 0) {
 		PX4_ERR("px4_task_spawn_cmd: failed to init thread attrs");

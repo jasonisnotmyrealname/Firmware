@@ -346,7 +346,7 @@ Mavlink::~Mavlink()
 
 void Mavlink::mavlink_update_parameters()
 {
-	updateParams();
+	updateParams();  //zjx:???
 
 	int32_t proto = _param_mav_proto_version.get();
 
@@ -1297,6 +1297,11 @@ MavlinkOrbSubscription *Mavlink::add_orb_subscription(const orb_id_t topic, int 
 		/* check if already subscribed to this topic */
 		MavlinkOrbSubscription *sub;
 
+	/* 在utlist.h中：
+		#define LL_FOREACH(head,el) for(el=head;el;el=(el)->next)
+		LL_FOREACH相当于for循环的一个省略，就是链表pointer的自增，链表的head就是_subscriptions
+		_subscriptions是一个MavlinkOrbSubscription类型
+	*/
 		LL_FOREACH(_subscriptions, sub) {
 			if (sub->get_topic() == topic && sub->get_instance() == instance) {
 				/* already subscribed */
@@ -1864,7 +1869,7 @@ Mavlink::task_main(int argc, char *argv[])
 
 	while ((ch = px4_getopt(argc, argv, "b:r:d:n:u:o:m:t:fwxz", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
-		case 'b':
+		case 'b':   //设置波特率
 			_baudrate = strtoul(myoptarg, nullptr, 10);
 
 			if (_baudrate < 9600 || _baudrate > 3000000) {
@@ -1874,7 +1879,7 @@ Mavlink::task_main(int argc, char *argv[])
 
 			break;
 
-		case 'r':
+		case 'r':   //设置传输速率
 			_datarate = strtoul(myoptarg, nullptr, 10);
 
 			if (_datarate < 10 || _datarate > MAX_DATA_RATE) {
@@ -1884,18 +1889,18 @@ Mavlink::task_main(int argc, char *argv[])
 
 			break;
 
-		case 'd':
+		case 'd':    //选择串口设备
 			_device_name = myoptarg;
 			set_protocol(SERIAL);
 			break;
 
-		case 'n':
+		case 'n':   
 			_interface_name = myoptarg;
 			break;
 
 #ifdef __PX4_POSIX
 
-		case 'u':
+		case 'u':   //选择UDP网络本地
 			temp_int_arg = strtoul(myoptarg, &eptr, 10);
 
 			if (*eptr == '\0') {
@@ -1909,7 +1914,7 @@ Mavlink::task_main(int argc, char *argv[])
 
 			break;
 
-		case 'o':
+		case 'o':   //选择UDP网络远程
 			temp_int_arg = strtoul(myoptarg, &eptr, 10);
 
 			if (*eptr == '\0') {
@@ -1923,7 +1928,7 @@ Mavlink::task_main(int argc, char *argv[])
 
 			break;
 
-		case 't':
+		case 't':     //伙伴IP，通过MAV_BROADCAST参数广播
 			_src_addr.sin_family = AF_INET;
 
 			if (inet_aton(myoptarg, &_src_addr.sin_addr)) {
@@ -1949,7 +1954,7 @@ Mavlink::task_main(int argc, char *argv[])
 //			mavlink_link_termination_allowed = true;
 //			break;
 
-		case 'm':
+		case 'm':   //设置默认的stream和rates
 			if (strcmp(myoptarg, "custom") == 0) {
 				_mode = MAVLINK_MODE_CUSTOM;
 
@@ -1979,11 +1984,11 @@ Mavlink::task_main(int argc, char *argv[])
 
 			break;
 
-		case 'f':
+		case 'f':    //消息可发给其他mavlink接口
 			_forwarding_on = true;
 			break;
 
-		case 'w':
+		case 'w':   //等待发送直到接收到第一个消息
 			_wait_to_transmit = true;
 			break;
 
@@ -2015,7 +2020,7 @@ Mavlink::task_main(int argc, char *argv[])
 		_datarate = MAX_DATA_RATE;
 	}
 
-	if (get_protocol() == SERIAL) {
+	if (get_protocol() == SERIAL) {   //Mavlink的protocol默认是SERIAL
 		if (Mavlink::instance_exists(_device_name, this)) {
 			PX4_ERR("%s already running", _device_name);
 			return PX4_ERROR;
@@ -2049,7 +2054,7 @@ Mavlink::task_main(int argc, char *argv[])
 			 mavlink_mode_str(_mode), _datarate, _network_port, _remote_port);
 	}
 
-	/* initialize send mutex */
+	/* initialize send mutex */    //初始化发送mutex
 	pthread_mutex_init(&_send_mutex, nullptr);
 
 	/* if we are passing on mavlink messages, we need to prepare a buffer for this instance */
@@ -2067,12 +2072,13 @@ Mavlink::task_main(int argc, char *argv[])
 		pthread_mutex_init(&_message_buffer_mutex, nullptr);
 	}
 
-	MavlinkOrbSubscription *cmd_sub = add_orb_subscription(ORB_ID(vehicle_command), 0, true);
+	//在对象的_subscription增加topic节点，返回节点
+	MavlinkOrbSubscription *cmd_sub = add_orb_subscription(ORB_ID(vehicle_command), 0, true);  //最后一个参数是disable_sharing,默认是false（就是share该topic)
 	MavlinkOrbSubscription *param_sub = add_orb_subscription(ORB_ID(parameter_update));
 	uint64_t param_time = 0;
 	MavlinkOrbSubscription *status_sub = add_orb_subscription(ORB_ID(vehicle_status));
 	uint64_t status_time = 0;
-	MavlinkOrbSubscription *ack_sub = add_orb_subscription(ORB_ID(vehicle_command_ack), 0, true);
+	MavlinkOrbSubscription *ack_sub = add_orb_subscription(ORB_ID(vehicle_command_ack), 0, true); //zjx:???
 	/* We don't want to miss the first advertise of an ACK, so we subscribe from the
 	 * beginning and not just when the topic exists. */
 	ack_sub->subscribe_from_beginning(true);
@@ -2084,7 +2090,7 @@ Mavlink::task_main(int argc, char *argv[])
 	MavlinkOrbSubscription *mavlink_log_sub = add_orb_subscription(ORB_ID(mavlink_log));
 
 	struct vehicle_status_s status;
-	status_sub->update(&status_time, &status);
+	status_sub->update(&status_time, &status);  //更新vehicle_status消息
 
 	/* Activate sending the data by default (for the IRIDIUM mode it will be disabled after the first round of packages is sent)*/
 	_transmitting_enabled = true;
@@ -2095,6 +2101,8 @@ Mavlink::task_main(int argc, char *argv[])
 	}
 
 	/* add default streams depending on mode */
+	// 增加默认的stream，比如1s为周期的heartbeat等
+	// configure_name就是创建一个stream，所有的stream都由_stream来维护
 	if (_mode != MAVLINK_MODE_IRIDIUM) {
 
 		/* HEARTBEAT is constant rate stream, rate never adjusted */
@@ -2113,7 +2121,7 @@ Mavlink::task_main(int argc, char *argv[])
 	}
 
 	/* set main loop delay depending on data rate to minimize CPU overhead */
-	_main_loop_delay = (MAIN_LOOP_DELAY * 1000) / _datarate;
+	_main_loop_delay = (MAIN_LOOP_DELAY * 1000) / _datarate;  //zjx: 1/_datarate的单位是s，表示数据周期，×1000变成ms
 
 	/* hard limit to 1000 Hz at max */
 	if (_main_loop_delay < MAVLINK_MIN_INTERVAL) {
@@ -2126,7 +2134,7 @@ Mavlink::task_main(int argc, char *argv[])
 	}
 
 	/* now the instance is fully initialized and we can bump the instance count */
-	LL_APPEND(_mavlink_instances, this);
+	LL_APPEND(_mavlink_instances, this);  //向_mavlink_instances链表中添加this,_mavlink_instances是一个static，可以在各个对象中共享
 
 	/* init socket if necessary */
 	if (get_protocol() == UDP) {
@@ -2139,24 +2147,26 @@ Mavlink::task_main(int argc, char *argv[])
 	}
 
 	/* start the MAVLink receiver last to avoid a race */
+	// 开始接收，启动一个 MavlinkReceiver::receive_thread 线程，用于从UART接收数据
 	MavlinkReceiver::receive_start(&_receive_thread, this);
 
 	while (!_task_should_exit) {
 		/* main loop */
-		usleep(_main_loop_delay);
+		usleep(_main_loop_delay);   //靠usleep延时，能准吗？
 
-		perf_begin(_loop_perf);
+		perf_begin(_loop_perf);  //perf用于测试性能
 
-		hrt_abstime t = hrt_absolute_time();
+		hrt_abstime t = hrt_absolute_time();   //记录hard real time时间
 
-		update_rate_mult();
+		update_rate_mult();  //zjx::???
 
-		if (param_sub->update(&param_time, nullptr)) {
+		if (param_sub->update(&param_time, nullptr)) {   //更新参数
 			mavlink_update_parameters();
 		}
 
-		check_radio_config();
+		check_radio_config();   //查看radio的设置(设备fd是_uart_fd，在前面已经打开)
 
+		//更新vehicle_status
 		if (status_sub->update(&status_time, &status)) {
 			/* switch HIL mode if required */
 			set_hil_enabled(status.hil_state == vehicle_status_s::HIL_STATE_ON);
@@ -2179,7 +2189,7 @@ Mavlink::task_main(int argc, char *argv[])
 		}
 
 		struct vehicle_command_s vehicle_cmd;
-
+		//更新vehicle_command
 		if (cmd_sub->update_if_changed(&vehicle_cmd)) {
 			if ((vehicle_cmd.command == vehicle_command_s::VEHICLE_CMD_CONTROL_HIGH_LATENCY) &&
 			    (_mode == MAVLINK_MODE_IRIDIUM)) {
@@ -2203,6 +2213,7 @@ Mavlink::task_main(int argc, char *argv[])
 				}
 
 				// send positive command ack
+				// 将command ack消息publish(谁收??)
 				vehicle_command_ack_s command_ack = {};
 				command_ack.timestamp = vehicle_cmd.timestamp;
 				command_ack.command = vehicle_cmd.command;
@@ -2246,11 +2257,13 @@ Mavlink::task_main(int argc, char *argv[])
 
 		struct mavlink_log_s mavlink_log;
 
+		//更新mavlink_log
 		if (mavlink_log_sub->update_if_changed(&mavlink_log)) {
 			_logbuffer.put(&mavlink_log);
 		}
 
-		/* check for shell output */
+		/* check for shell output */ 
+		//zjx::???
 		if (_mavlink_shell && _mavlink_shell->available() > 0) {
 			if (get_free_tx_buf() >= MAVLINK_MSG_ID_SERIAL_CONTROL_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES) {
 				mavlink_serial_control_t msg;
@@ -2263,6 +2276,7 @@ Mavlink::task_main(int argc, char *argv[])
 			}
 		}
 
+		//zjx:ulog???
 		/* check for ulog streaming messages */
 		if (_mavlink_ulog) {
 			if (_mavlink_ulog_stop_requested) {
@@ -2336,6 +2350,7 @@ Mavlink::task_main(int argc, char *argv[])
 		}
 
 		/* update streams */
+		// _streams列表中的每个stream都更新
 		MavlinkStream *stream;
 		LL_FOREACH(_streams, stream) {
 			stream->update(t);
@@ -2518,7 +2533,7 @@ void Mavlink::check_radio_config()
 	if (_uart_fd >= 0 && _param_radio_id.get() != 0
 	    && _tstatus.type == telemetry_status_s::TELEMETRY_STATUS_RADIO_TYPE_3DR_RADIO) {
 		/* request to configure radio and radio is present */
-		FILE *fs = fdopen(_uart_fd, "w");
+		FILE *fs = fdopen(_uart_fd, "w");  
 
 		if (fs) {
 			/* switch to AT command mode */
@@ -2590,12 +2605,12 @@ int Mavlink::start_helper(int argc, char *argv[])
 int
 Mavlink::start(int argc, char *argv[])
 {
-	MavlinkULog::initialize();
-	MavlinkCommandSender::initialize();
+	MavlinkULog::initialize();   //?
+	MavlinkCommandSender::initialize();   //?
 
 	// Wait for the instance count to go up one
 	// before returning to the shell
-	int ic = Mavlink::instance_count();
+	int ic = Mavlink::instance_count();   //? 增加_mavlink_instances?
 
 	if (ic == Mavlink::MAVLINK_MAX_INSTANCES) {
 		PX4_ERR("Maximum MAVLink instance count of %d reached.",
@@ -2611,6 +2626,7 @@ Mavlink::start(int argc, char *argv[])
 	// between the starting task and the spawned
 	// task - start_helper() only returns
 	// when the started task exits.
+	// 这里创建了start_helper的守护进程
 	px4_task_spawn_cmd(buf,
 			   SCHED_DEFAULT,
 			   SCHED_PRIORITY_DEFAULT,
@@ -2633,6 +2649,7 @@ Mavlink::start(int argc, char *argv[])
 
 	unsigned count = 0;
 
+	//轮询等待
 	while (ic == Mavlink::instance_count() && count < limit) {
 		::usleep(sleeptime);
 		count++;

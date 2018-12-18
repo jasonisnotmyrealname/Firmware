@@ -98,7 +98,7 @@ public:
 	int		start();
 
 	/**
-	 * Stop automatic measurement.
+	 * Stop automatic measure/ment.
 	 *
 	 * @return 0 on success
 	 */
@@ -320,7 +320,7 @@ int DfMpu9250Wrapper::start()
 		return ret;
 	}
 
-	ret = MPU9250::start();
+	ret = MPU9250::start();  
 
 	if (ret != 0) {
 		PX4_ERR("MPU9250 start fail: %d", ret);
