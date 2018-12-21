@@ -810,6 +810,7 @@ void Logger::run()
 	PX4_INFO("logger started (mode=%s)", configured_backend_mode());
 
 	if (_writer.backend() & LogWriter::BackendFile) {
+		PX4_INFO("Debug ------------------------------(dir=%s)",LOG_ROOT);  //zjx
 		int mkdir_ret = mkdir(LOG_ROOT, S_IRWXU | S_IRWXG | S_IRWXO);
 
 		if (mkdir_ret == 0) {
@@ -840,12 +841,13 @@ void Logger::run()
 		PX4_INFO("logging %d topics from logger_topics.txt", ntopics);
 
 	} else {
-
+		
 		// get the logging profile
 		SDLogProfileMask sdlog_profile = SDLogProfileMask::DEFAULT;
 
 		if (_sdlog_profile_handle != PARAM_INVALID) {
 			param_get(_sdlog_profile_handle, (int32_t*)&sdlog_profile);
+			PX4_INFO("Debug ------------------------------%x",_sdlog_profile_handle);  //zjx
 		}
 		if ((int32_t)sdlog_profile == 0) {
 			PX4_WARN("No logging profile selected. Using default set");
@@ -855,30 +857,37 @@ void Logger::run()
 		// load appropriate topics for profile
 		// the order matters: if several profiles add the same topic, the logging rate of the last one will be used
 		if (sdlog_profile & SDLogProfileMask::DEFAULT) {
+			PX4_INFO("Debug ------------------------------DEFAULT");  //zjx 1
 			add_default_topics();
 		}
 
 		if (sdlog_profile & SDLogProfileMask::ESTIMATOR_REPLAY) {
+			PX4_INFO("Debug ------------------------------ESTIMATOR_REPLAY");  //zjx 1
 			add_estimator_replay_topics();
 		}
 
 		if (sdlog_profile & SDLogProfileMask::THERMAL_CALIBRATION) {
+			PX4_INFO("Debug ------------------------------THERMAL_CALIBRATION");  //zjx
 			add_thermal_calibration_topics();
 		}
 
 		if (sdlog_profile & SDLogProfileMask::SYSTEM_IDENTIFICATION) {
+			PX4_INFO("Debug ------------------------------SYSTEM_IDENTIFICATION");  //zjx
 			add_system_identification_topics();
 		}
 
 		if (sdlog_profile & SDLogProfileMask::HIGH_RATE) {
+			PX4_INFO("Debug ------------------------------HIGH_RATE");  //zjx
 			add_high_rate_topics();
 		}
 
 		if (sdlog_profile & SDLogProfileMask::DEBUG_TOPICS) {
+			PX4_INFO("Debug ------------------------------DEBUG_TOPICS");  //zjx
 			add_debug_topics();
 		}
 
 		if (sdlog_profile & SDLogProfileMask::SENSOR_COMPARISON) {
+			PX4_INFO("Debug ------------------------------SENSOR_COMPARISON");  //zjx
 			add_sensor_comparison_topics();
 		}
 

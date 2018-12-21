@@ -62,12 +62,12 @@ set(config_module_list
 	# General system control
 	#
 #	modules/camera_feedback
-#	modules/commander   #DEPENDS circuit_breaker/df_driver_framework/git_ecl/ecl_geo.依赖与sensors
+#	modules/commander   #DEPENDS circuit_breaker/df_driver_framework/git_ecl/ecl_geo.依赖于sensors
 #	modules/events
 	#modules/gpio_led
 #	modules/land_detector
 #	modules/load_mon
-	modules/mavlink   #依赖dataman. Mavlink也是一个单独维护的仓库
+	modules/mavlink   #依赖dataman/commander/sensors. Mavlink也是一个单独维护的仓库
 #	modules/navigator    #依赖git_ecl/ecl_geo/landing_slope
 #	modules/replay
 #	modules/simulator
@@ -96,7 +96,7 @@ set(config_module_list
 	#
 	# Logging
 	#
-#	modules/logger  
+	modules/logger  
 
 	#
 	# Library modules

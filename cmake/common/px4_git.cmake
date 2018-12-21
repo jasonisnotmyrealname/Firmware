@@ -61,14 +61,16 @@ include(common/px4_base)
 #	Example:
 #		px4_add_git_submodule(TARGET git_nuttx PATH "NuttX")
 #       px4_add_git_submodule(TARGET git_gps_devices PATH "devices")
+#       其中PATH指的是生成文件所在的文件夹
 #
 function(px4_add_git_submodule)
+	#解析参数:TARGET和PATH是单值的变量（ONE_VALUE），也是必需的（REQUIRED）
 	px4_parse_function_args(
 		NAME px4_add_git_submodule
 		ONE_VALUE TARGET PATH
 		REQUIRED TARGET PATH
 		ARGN ${ARGN})
-
+	# check_submodules用于检查submodule是不是存在等，执行git submodule update等...
 	execute_process(COMMAND ${PX4_SOURCE_DIR}/Tools/check_submodules.sh ${PATH}
 			WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 			)
@@ -85,5 +87,5 @@ function(px4_add_git_submodule)
 		USES_TERMINAL
 		)
 
-	add_custom_target(${TARGET} DEPENDS git_init_${NAME}.stamp)
+	add_custom_target(${TARGET} DEPENDS git_init_${NAME}.stamp)  #对于mavlink来说,这个stamp是空文件，写不写都行
 endfunction()

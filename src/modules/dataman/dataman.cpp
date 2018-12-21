@@ -67,6 +67,7 @@
 #include <nuttx/progmem.h>
 #endif
 
+#include <iostream>   //zjx
 
 __BEGIN_DECLS
 __EXPORT int dataman_main(int argc, char *argv[]);
@@ -1600,6 +1601,7 @@ dataman_main(int argc, char *argv[])
 			}
 		}
 
+		// 默认是BACKEND_FILE
 		if (backend == BACKEND_NONE) {
 			backend = BACKEND_FILE;
 			k_data_manager_device_path = strdup(default_device_path);
