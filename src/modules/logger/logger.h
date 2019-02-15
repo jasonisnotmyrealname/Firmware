@@ -99,6 +99,8 @@ struct LoggerSubscription {
 	}
 };
 
+
+//Logger这个类负责确认要log的消息、采集要log的消息，管理log的周期等，并把消息log到文件或mavlink上
 class Logger : public ModuleBase<Logger>
 {
 public:

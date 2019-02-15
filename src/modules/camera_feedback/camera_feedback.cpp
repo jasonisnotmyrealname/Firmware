@@ -35,6 +35,7 @@
  * @file camera_feedback.cpp
  *
  * Online and offline geotagging from camera feedback
+ * 在相机曝光时，将图像的时间、gps位置和载机姿态发送到uorb上
  *
  * @author Mohammed Kabir <kabir@uasys.io>
  */

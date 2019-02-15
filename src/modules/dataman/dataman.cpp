@@ -176,7 +176,7 @@ typedef enum {
 	dm_read_func,
 	dm_clear_func,
 	dm_restart_func,
-	dm_number_of_funcs
+	dm_number_of_funcs      //放在enum的最后，正好用来表示有多少个function
 } dm_function_t;
 
 /** Work task work item */
@@ -212,6 +212,7 @@ typedef struct {
 const size_t k_work_item_allocation_chunk_size = 8;
 
 /* Usage statistics */
+// 用于统计不同的funcs被调用的次数
 static unsigned g_func_counts[dm_number_of_funcs];
 
 /* table of maximum number of instances for each item type */
@@ -391,6 +392,8 @@ dequeue_work_item()
 	return work;
 }
 
+
+//把item（可能是dm_write，或者dm_read等）压入work queue并等待结果
 static int
 enqueue_work_item_and_wait_for_result(work_q_item_t *item)
 {
@@ -406,9 +409,11 @@ enqueue_work_item_and_wait_for_result(work_q_item_t *item)
 	unlock_queue(&g_work_q);
 
 	/* tell the work thread that work is available */
+	// 通知task_main可以工作了
 	px4_sem_post(&g_work_queued_sema);
 
 	/* wait for the result */
+	// 等待task_main结束
 	px4_sem_wait(&item->wait_sem);
 
 	int result = item->result;
@@ -1080,6 +1085,7 @@ _ram_flash_wait(px4_sem_t *sem)
 #endif
 
 /** Write to the data manager file */
+// datamanager 写（由别的模块调用，比如说mavlink）.封装一个work_q_item_t类型，然后把它压到任务queue中，并通知task_main去执行
 __EXPORT ssize_t
 dm_write(dm_item_t item, unsigned index, dm_persitence_t persistence, const void *buf, size_t count)
 {
@@ -1253,9 +1259,10 @@ static int
 task_main(int argc, char *argv[])
 {
 	/* Dataman can use disk or RAM */
+	// 后端类型
 	switch (backend) {
 	case BACKEND_FILE:
-		g_dm_ops = &dm_file_operations;
+		g_dm_ops = &dm_file_operations;   //g_dm_ops是dm_operations_t类型的结构体指针
 		break;
 
 	case BACKEND_RAM:
@@ -1362,6 +1369,7 @@ task_main(int argc, char *argv[])
 	}
 
 	/* Tell startup that the worker thread has completed its initialization */
+	// 这样start()就可以结束了，此时task_main类似detach的状态?
 	px4_sem_post(&g_init_sema);
 
 	/* Start the endless loop, waiting for then processing work requests */
@@ -1370,20 +1378,21 @@ task_main(int argc, char *argv[])
 		/* do we need to exit ??? */
 		if (!g_task_should_exit) {
 			/* wait for work */
-			g_dm_ops->wait(&g_work_queued_sema);
+			g_dm_ops->wait(&g_work_queued_sema);   //等待dm_write、dm_read等对g_work_queued_sema的操作
 		}
 
 		/* Empty the work queue */
-		while ((work = dequeue_work_item())) {
+		while ((work = dequeue_work_item())) {   //从任务队列中取出一个work
 
 			/* handle each work item with the appropriate handler */
+			// handle不同的work类型
 			switch (work->func) {
 			case dm_write_func:
 				g_func_counts[dm_write_func]++;
 				work->result =
 					g_dm_ops->write(work->write_params.item, work->write_params.index, work->write_params.persistence,
 							work->write_params.buf,
-							work->write_params.count);
+							work->write_params.count);   //执行_file_write或者_ram_write
 				break;
 
 			case dm_read_func:
@@ -1453,6 +1462,7 @@ start()
 	px4_sem_setprotocol(&g_init_sema, SEM_PRIO_NONE);
 
 	/* start the worker thread with low priority for disk IO */
+	// 启动worker线程，其他模块调用dm_read和dm_write操作参数
 	if ((task = px4_task_spawn_cmd("dataman", SCHED_DEFAULT, SCHED_PRIORITY_DEFAULT - 10, 1200, task_main, nullptr)) < 0) {
 		px4_sem_destroy(&g_init_sema);
 		PX4_ERR("task start failed");

@@ -122,7 +122,7 @@ static void work_process(struct wqueue_s *wqueue, int lock_id)
 		//printf("work_process: in ticks elapsed=%lu delay=%u\n", elapsed, work->delay);
 		if (elapsed >= work->delay) {
 			/* Remove the ready-to-execute work from the list */
-
+			// 执行时间到，从list中取出work执行
 			(void)dq_rem((struct dq_entry_s *)work, &wqueue->q);
 
 			/* Extract the work description from the entry (in case the work
@@ -146,7 +146,7 @@ static void work_process(struct wqueue_s *wqueue, int lock_id)
 				PX4_WARN("MESSED UP: worker = 0\n");
 
 			} else {
-				worker(arg);
+				worker(arg);    //执行worker，worker可能就是某一个cycle_trampoline，arg可能是某一个对象
 			}
 
 			/* Now, unfortunately, since we re-enabled interrupts we don't

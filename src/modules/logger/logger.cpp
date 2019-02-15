@@ -280,12 +280,12 @@ void Logger::print_statistics()
 
 Logger *Logger::instantiate(int argc, char *argv[])
 {
-	uint32_t log_interval = 3500;
+	uint32_t log_interval = 3500;   //单位是?
 	int log_buffer_size = 12 * 1024;
 	bool log_on_start = false;
-	bool log_until_shutdown = false;
+	bool log_until_shutdown = false;  
 	bool error_flag = false;
-	bool log_name_timestamp = false;
+	bool log_name_timestamp = false;   //如果为true，则log文件的名称中包含时间，需要靠-t参数来配置
 	unsigned int queue_size = 14; //TODO: we might be able to reduce this if mavlink polled on the topic and/or
 	// topic sizes get reduced
 	LogWriter::Backend backend = LogWriter::BackendAll;
@@ -377,6 +377,7 @@ Logger *Logger::instantiate(int argc, char *argv[])
 		return nullptr;
 	}
 
+	//poll_topic是要log的消息（就一条是吧?）
 	Logger *logger = new Logger(backend, log_buffer_size, log_interval, poll_topic, log_on_start,
 				    log_until_shutdown, log_name_timestamp, queue_size);
 
@@ -515,7 +516,7 @@ bool Logger::add_topic(const char *name, unsigned interval)
 			}
 
 			if (!already_added) {
-				subscription = add_topic(topics[i]);
+				subscription = add_topic(topics[i]);   //如果这个topic没有被加过，则把它push到_subscriptions中
 				PX4_DEBUG("logging topic: %s, interval: %i", topics[i]->o_name, interval);
 				break;
 			}
@@ -788,6 +789,8 @@ int Logger::add_topics_from_file(const char *fname)
 	return ntopics;
 }
 
+//logger工作模式
+//就像usage()中说的，log有两种模式：一种是写到sd卡中（file模式），一种是写到mavlink中发给client（mavlink模式），或者both（all模式）。
 const char *Logger::configured_backend_mode() const
 {
 	switch (_writer.backend()) {
@@ -801,6 +804,8 @@ const char *Logger::configured_backend_mode() const
 	}
 }
 
+
+//在LogWriterFile的thread_start中被调用
 void Logger::run()
 {
 #ifdef DBGPRINT
@@ -809,10 +814,12 @@ void Logger::run()
 
 	PX4_INFO("logger started (mode=%s)", configured_backend_mode());
 
+	//_writer的模式是BackendFile
 	if (_writer.backend() & LogWriter::BackendFile) {
 		PX4_INFO("Debug ------------------------------(dir=%s)",LOG_ROOT);  //zjx
-		int mkdir_ret = mkdir(LOG_ROOT, S_IRWXU | S_IRWXG | S_IRWXO);
+		int mkdir_ret = mkdir(LOG_ROOT, S_IRWXU | S_IRWXG | S_IRWXO);   //建立log目录，默认是"/log"文件夹
 
+		//PX4_INFO("mkdir_ret is: %d", mkdir_ret);  //zjx  返回值是-1，但实际上已经创建过了
 		if (mkdir_ret == 0) {
 			PX4_INFO("log root dir created: %s", LOG_ROOT);
 
@@ -829,23 +836,24 @@ void Logger::run()
 		}
 	}
 
-	int vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
-	uORB::Subscription<parameter_update_s> parameter_update_sub(ORB_ID(parameter_update));
-	int log_message_sub = orb_subscribe(ORB_ID(log_message));
+	
+	int vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status)); //订阅vehicle_status消息，由commander发布
+	uORB::Subscription<parameter_update_s> parameter_update_sub(ORB_ID(parameter_update)); //订阅更新参数的消息？由_param_notify_changes发布
+	int log_message_sub = orb_subscribe(ORB_ID(log_message));  //在px4_log.c中发布，其实就是PX4_INFO、PX4_ERROR等消息
 	orb_set_interval(log_message_sub, 20);
 
-
+	//从文件中取出需要log的topics
 	int ntopics = add_topics_from_file(PX4_STORAGEDIR "/etc/logging/logger_topics.txt");
 
 	if (ntopics > 0) {
 		PX4_INFO("logging %d topics from logger_topics.txt", ntopics);
 
 	} else {
-		
+		PX4_INFO("logger_topics.txt is missing");   //zjx
 		// get the logging profile
 		SDLogProfileMask sdlog_profile = SDLogProfileMask::DEFAULT;
 
-		if (_sdlog_profile_handle != PARAM_INVALID) {
+		if (_sdlog_profile_handle != PARAM_INVALID) {   //zjx _sdlog_profile_handle是一个param_t变量，这个还要看param的代码
 			param_get(_sdlog_profile_handle, (int32_t*)&sdlog_profile);
 			PX4_INFO("Debug ------------------------------%x",_sdlog_profile_handle);  //zjx
 		}
@@ -896,10 +904,12 @@ void Logger::run()
 	int vehicle_command_sub = -1;
 	orb_advert_t vehicle_command_ack_pub = nullptr;
 
+	// vehicle_command由mavlink_receiver、navigator等发布
 	if (_writer.backend() & LogWriter::BackendMavlink) {
 		vehicle_command_sub = orb_subscribe(ORB_ID(vehicle_command));
 	}
 
+	// 确定每一个topic需要的buffer size，只取最大的那个作为max_msg_size
 	//all topics added. Get required message buffer size
 	int max_msg_size = 0;
 	int ret = 0;
@@ -935,7 +945,7 @@ void Logger::run()
 		}
 	}
 
-
+	//初始化logger，创建线程：回调logger的run函数执行
 	if (!_writer.init()) {
 		PX4_ERR("writer init failed");
 		return;
@@ -946,31 +956,31 @@ void Logger::run()
 	uint32_t	total_bytes = 0;
 #endif /* DBGPRINT */
 
-	px4_register_shutdown_hook(&Logger::request_stop_static);
+	px4_register_shutdown_hook(&Logger::request_stop_static);  //把request_stop_static作为shutdown的钩子?
 
 	// we start logging immediately
 	// the case where we wait with logging until vehicle is armed is handled below
-	if (_log_on_start) {
-		start_log_file();
+	if (_log_on_start) {   //默认是false，需要用logger指令的参数来确定开不开始
+		start_log_file();   //开始log
 	}
 
 	/* init the update timer */
-	struct hrt_call timer_call{};
-	timer_callback_data_s timer_callback_data;
+	struct hrt_call timer_call{};   //包括了时间的几个参数：dealine时间、period、callout时间（？）
+	timer_callback_data_s timer_callback_data;  //timer_callback_data_s是一个结构体，包括semaphore和watchdog信息
 	px4_sem_init(&timer_callback_data.semaphore, 0, 0);
 	/* timer_semaphore use case is a signal */
-	px4_sem_setprotocol(&timer_callback_data.semaphore, SEM_PRIO_NONE);
+	px4_sem_setprotocol(&timer_callback_data.semaphore, SEM_PRIO_NONE);  //赋值?
 
 	int polling_topic_sub = -1;
 
-	if (_polling_topic_meta) {
+	if (_polling_topic_meta) {   //是一个orb_metadata类型的指针,指向要log的消息
 		polling_topic_sub = orb_subscribe(_polling_topic_meta);
 
 		if (polling_topic_sub < 0) {
 			PX4_ERR("Failed to subscribe (%i)", errno);
 		}
 
-	} else {
+	} else {   //如果没有要log的信息?
 
 		if (_writer.backend() & LogWriter::BackendFile) {
 
@@ -979,9 +989,10 @@ void Logger::run()
 
 			// sched_note_start is already called from pthread_create and task_create,
 			// which means we can expect to find the tasks in system_load.tasks, as required in watchdog_initialize
-			watchdog_initialize(pid_self, writer_thread, timer_callback_data.watchdog_data);
+			watchdog_initialize(pid_self, writer_thread, timer_callback_data.watchdog_data);  //Nuttx才用
 		}
 
+		//zjx:???
 		hrt_call_every(&timer_call, _log_interval, _log_interval, timer_callback, &timer_callback_data);
 	}
 
@@ -992,6 +1003,7 @@ void Logger::run()
 	while (!should_exit()) {
 
 		// Start/stop logging when system arm/disarm
+		// arm的时候自动log，disarm的时候停止log
 		bool vehicle_status_updated;
 		ret = orb_check(vehicle_status_sub, &vehicle_status_updated);
 
@@ -1026,6 +1038,7 @@ void Logger::run()
 		}
 
 		/* check for logging command from MAVLink */
+		// 检查Mavlink传过来的log command来决定要不要开始和停止log
 		if (vehicle_command_sub != -1) {
 			bool command_updated = false;
 			ret = orb_check(vehicle_command_sub, &command_updated);
@@ -1057,7 +1070,7 @@ void Logger::run()
 			}
 		}
 
-
+		//狗叫了?
 		if (timer_callback_data.watchdog_triggered) {
 			timer_callback_data.watchdog_triggered = false;
 			initialize_load_output(PrintLoadReason::Watchdog);
@@ -1097,6 +1110,7 @@ void Logger::run()
 
 			int sub_idx = 0;
 
+			//查看每一个_subscriptions（是一个Array<LoggerSubscription, MAX_TOPICS_NUM>）是不是有更新
 			for (LoggerSubscription &sub : _subscriptions) {
 				/* each message consists of a header followed by an orb data object
 				 */
@@ -1105,6 +1119,7 @@ void Logger::run()
 				/* if this topic has been updated, copy the new data into the message buffer
 				 * and write a message to the log
 				 */
+				// instance是什么?
 				for (int instance = 0; instance < ORB_MULTI_MAX_INSTANCES; instance++) {
 					if (copy_if_updated_multi(sub, instance, _msg_buffer + sizeof(ulog_message_data_header_s),
 								  sub_idx == next_subscribe_topic_index)) {
@@ -1137,7 +1152,7 @@ void Logger::run()
 				++sub_idx;
 			}
 
-			//check for new logging message(s)
+			//check for new logging message(s)。这个logging消息应该就是PX4_INFO、PX4_ERROR等消息
 			bool log_message_updated = false;
 			ret = orb_check(log_message_sub, &log_message_updated);
 
@@ -1169,6 +1184,7 @@ void Logger::run()
 			_writer.unlock();
 
 			/* notify the writer thread if data is available */
+			// zjx??????
 			if (data_written) {
 				_writer.notify();
 			}
@@ -1316,12 +1332,13 @@ bool Logger::write_message(void *ptr, size_t size)
 	return false;
 }
 
+//创建log目录
 int Logger::create_log_dir(tm *tt)
 {
 	/* create dir on sdcard if needed */
 	int mkdir_ret;
 
-	if (tt) {
+	if (tt) {  //如果有gps时间，就按照时间创建目录
 		int n = snprintf(_log_dir, sizeof(_log_dir), "%s/", LOG_ROOT);
 
 		if (n >= (int)sizeof(_log_dir)) {
@@ -1337,7 +1354,7 @@ int Logger::create_log_dir(tm *tt)
 			return -1;
 		}
 
-	} else {
+	} else {  
 		uint16_t dir_number = _sess_dir_index;
 
 		/* look for the next dir that does not exist */
@@ -1377,14 +1394,15 @@ bool Logger::file_exist(const char *filename)
 	return stat(filename, &buffer) == 0;
 }
 
+//获得要log的文件名称
 int Logger::get_log_file_name(char *file_name, size_t file_name_size)
 {
-	tm tt = {};
+	tm tt = {};   //tm是时间格式，年月日时分秒
 	bool time_ok = false;
 
 	if (_log_name_timestamp) {
 		/* use RTC time for log file naming, e.g. /fs/microsd/2014-01-19/19_37_52.ulg */
-		time_ok = get_log_time(&tt, false);
+		time_ok = get_log_time(&tt, false);   //从vehicle_gps_position消息中获得时间
 	}
 
 	const char *replay_suffix = "";
@@ -1394,8 +1412,8 @@ int Logger::get_log_file_name(char *file_name, size_t file_name_size)
 	}
 
 
-	if (time_ok) {
-		if (create_log_dir(&tt)) {
+	if (time_ok) {   //获得了时间消息
+		if (create_log_dir(&tt)) {  //按照时间来建立目录，比如/fs/microsd/2014-01-19/
 			return -1;
 		}
 
@@ -1405,7 +1423,7 @@ int Logger::get_log_file_name(char *file_name, size_t file_name_size)
 		snprintf(file_name, file_name_size, "%s/%s", _log_dir, _log_file_name);
 
 	} else {
-		if (create_log_dir(nullptr)) {
+		if (create_log_dir(nullptr)) {  //按照顺序来建立目录，比如/fs/microsd/sess001/
 			return -1;
 		}
 
@@ -1429,8 +1447,6 @@ int Logger::get_log_file_name(char *file_name, size_t file_name_size)
 			return -1;
 		}
 	}
-
-
 	return 0;
 }
 
@@ -1497,33 +1513,34 @@ bool Logger::get_log_time(struct tm *tt, bool boot_time)
 void Logger::start_log_file()
 {
 	if (_writer.is_started(LogWriter::BackendFile) || (_writer.backend() & LogWriter::BackendFile) == 0) {
-		return;
+		return;   //如果已经开始log了，就直接返回
 	}
 
 	PX4_INFO("Start file log");
 
 	char file_name[LOG_DIR_LEN] = "";
 
-	if (get_log_file_name(file_name, sizeof(file_name))) {
+	if (get_log_file_name(file_name, sizeof(file_name))) {   //获得log文件的名称
 		PX4_ERR("logger: failed to get log file name");
 		return;
 	}
 
 	/* print logging path, important to find log file later */
+	// Send a mavlink info message，告诉地面站log file的位置
 	mavlink_log_info(&_mavlink_log_pub, "[logger] file: %s", file_name);
 
-	_writer.start_log_file(file_name);
-	_writer.select_write_backend(LogWriter::BackendFile);
-	_writer.set_need_reliable_transfer(true);
-	write_header();
-	write_version();
-	write_formats();
-	write_parameters();
+	_writer.start_log_file(file_name);   //创建文件、开辟buffer
+	_writer.select_write_backend(LogWriter::BackendFile);   //选择log的种类:file还是mavlink？
+	_writer.set_need_reliable_transfer(true);   //把_need_reliable_transfer赋值为true
+	write_header();   //log帧头
+	write_version();  //log版本号（固件版本、mcu厂商、os类型、ecl版本、git版本等）
+	write_formats();  //log 所有的topic消息类型?
+	write_parameters();   //zjx?????
 	write_perf_data(true);
-	write_all_add_logged_msg();
+	write_all_add_logged_msg();  //log added的topic消息类
 	_writer.set_need_reliable_transfer(false);
 	_writer.unselect_write_backend();
-	_writer.notify();
+	_writer.notify();   //zjx,通知谁??
 
 	/* reset performance counters to get in-flight min and max values in post flight log */
 	perf_reset_all();
@@ -1680,7 +1697,7 @@ void Logger::write_formats()
 {
 	_writer.lock();
 	ulog_message_format_s msg = {};
-	const orb_metadata *const*topics = orb_get_topics();
+	const orb_metadata *const*topics = orb_get_topics();   //获得_uorb_topics_list?后者只在.template中有
 
 	//write all known formats
 	for (size_t i = 0; i < orb_topics_count(); i++) {

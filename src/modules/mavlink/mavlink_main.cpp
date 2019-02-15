@@ -105,7 +105,7 @@
 #define FLOW_CONTROL_DISABLE_THRESHOLD		40	///< picked so that some messages still would fit it.
 //#define MAVLINK_PRINT_PACKETS
 
-static Mavlink *_mavlink_instances = nullptr;
+static Mavlink *_mavlink_instances = nullptr;  //_mavlink_instances是一个instance链表
 
 /**
  * mavlink app start / stop handling function
@@ -116,9 +116,10 @@ extern "C" __EXPORT int mavlink_main(int argc, char *argv[]);
 
 extern mavlink_system_t mavlink_system;
 
+//在Mavlink头文件的mavlink_helper.h中被调用，在mavlink_bridge_header.h中被define为MAVLINK_SEND_UART_BYTES
 void mavlink_send_uart_bytes(mavlink_channel_t chan, const uint8_t *ch, int length)
 {
-	Mavlink *m = Mavlink::get_instance(chan);
+	Mavlink *m = Mavlink::get_instance(chan);   //找到通道对应的Mavlink对象，channle编号和instance_id是一样的，见Mavlink的构造函数
 
 	if (m != nullptr) {
 		m->send_bytes(ch, length);
@@ -132,6 +133,7 @@ void mavlink_send_uart_bytes(mavlink_channel_t chan, const uint8_t *ch, int leng
 	}
 }
 
+//在Mavlink头文件的mavlink_helper.h中被调用，在mavlink_bridge_header.h中被define为MAVLINK_START_UART_SEND
 void mavlink_start_uart_send(mavlink_channel_t chan, int length)
 {
 	Mavlink *m = Mavlink::get_instance(chan);
@@ -144,6 +146,7 @@ void mavlink_start_uart_send(mavlink_channel_t chan, int length)
 	}
 }
 
+//同上
 void mavlink_end_uart_send(mavlink_channel_t chan, int length)
 {
 	Mavlink *m = Mavlink::get_instance(chan);
@@ -190,12 +193,13 @@ static void usage();
 
 bool Mavlink::_boot_complete = false;
 
+
 Mavlink::Mavlink() :
 	ModuleParams(nullptr),
 	_device_name("/dev/ttyS1"),
 	_task_should_exit(false),
 	next(nullptr),
-	_instance_id(0),
+	_instance_id(0),   //_mavlink_instances链表中的每个对象都按顺序编号
 	_transmitting_enabled(true),
 	_transmitting_enabled_commanded(false),
 	_mavlink_log_pub(nullptr),
@@ -260,7 +264,7 @@ Mavlink::Mavlink() :
 	/* performance counters */
 	_loop_perf(perf_alloc(PC_ELAPSED, "mavlink_el"))
 {
-	_instance_id = Mavlink::instance_count();
+	_instance_id = Mavlink::instance_count();  //数一下目前有多少个instance，instance_count返回的是比目前instance_id大一号的值
 
 	/* set channel according to instance id */
 	switch (_instance_id) {
@@ -305,6 +309,7 @@ Mavlink::Mavlink() :
 	}
 
 	// initialise parameter cache
+	// parameter相关存疑 zjx
 	mavlink_update_parameters();
 
 	// save the current system- and component ID because we don't allow them to change during operation
@@ -379,6 +384,8 @@ Mavlink::set_proto_version(unsigned version)
 	}
 }
 
+
+//查一遍_mavlink_instances有多少个对象,返回比这个数字大1的值
 int
 Mavlink::instance_count()
 {
@@ -392,6 +399,8 @@ Mavlink::instance_count()
 	return inst_index;
 }
 
+
+//获得_instance_id为instance的mavlink对象
 Mavlink *
 Mavlink::get_instance(int instance)
 {
@@ -405,6 +414,7 @@ Mavlink::get_instance(int instance)
 	return nullptr;
 }
 
+//获得device_name对应的Mavlink对象
 Mavlink *
 Mavlink::get_instance_for_device(const char *device_name)
 {
@@ -419,6 +429,8 @@ Mavlink::get_instance_for_device(const char *device_name)
 	return nullptr;
 }
 
+
+//获得port对应的Mavlink对象
 Mavlink *
 Mavlink::get_instance_for_network_port(unsigned long port)
 {
@@ -433,6 +445,8 @@ Mavlink::get_instance_for_network_port(unsigned long port)
 	return nullptr;
 }
 
+
+//只有在rcS中执行mavlink stop-all指令时调用
 int
 Mavlink::destroy_all_instances()
 {
@@ -477,6 +491,8 @@ Mavlink::destroy_all_instances()
 	return OK;
 }
 
+
+//在rcS中执行mavlink status时调用
 int
 Mavlink::get_status_all_instances(bool show_streams_status)
 {
@@ -504,6 +520,8 @@ Mavlink::get_status_all_instances(bool show_streams_status)
 	return (iterations == 0);
 }
 
+
+//在链表_mavlink_instances中查看当前有没有device_name对应的mavlink对象
 bool
 Mavlink::instance_exists(const char *device_name, Mavlink *self)
 {
@@ -522,6 +540,7 @@ Mavlink::instance_exists(const char *device_name, Mavlink *self)
 	return false;
 }
 
+//zjx??
 void
 Mavlink::forward_message(const mavlink_message_t *msg, Mavlink *self)
 {
@@ -556,7 +575,7 @@ Mavlink::forward_message(const mavlink_message_t *msg, Mavlink *self)
 	}
 }
 
-
+//返回index对应的mavlink对象的uart id
 int
 Mavlink::get_uart_fd(unsigned index)
 {
@@ -587,16 +606,19 @@ Mavlink::get_channel()
 	return _channel;
 }
 
+//获得系统的system id
 int Mavlink::get_system_id()
 {
 	return mavlink_system.sysid;
 }
 
+//获得系统的component id
 int Mavlink::get_component_id()
 {
 	return mavlink_system.compid;
 }
 
+//mavlink打开uart，当mavlink的端口是uart时使用
 int Mavlink::mavlink_open_uart(int baud, const char *uart_name, bool force_flow_control)
 {
 #ifndef B460800
@@ -682,6 +704,7 @@ int Mavlink::mavlink_open_uart(int baud, const char *uart_name, bool force_flow_
 	}
 
 	/* back off 1800 ms to avoid running into the USB setup timing */
+	// MAVLINK_MODE_CONFIG表示地面站对px4进行配置?
 	while (_mode == MAVLINK_MODE_CONFIG &&
 	       hrt_absolute_time() < 1800U * 1000U) {
 		usleep(50000);
@@ -743,8 +766,8 @@ int Mavlink::mavlink_open_uart(int baud, const char *uart_name, bool force_flow_
 	/* Clear ONLCR flag (which appends a CR for every LF) */
 	uart_config.c_oflag &= ~ONLCR;
 
-	/* USB serial is indicated by /dev/ttyACM0*/
-	if (strcmp(uart_name, "/dev/ttyACM0") != OK && strcmp(uart_name, "/dev/ttyACM1") != OK) {
+	//区分是USB_UART还是普通UART
+	if (strcmp(uart_name, "/dev/ttyACM0") != OK && strcmp(uart_name, "/dev/ttyACM1") != OK) {  //普通的
 
 		/* Set baud rate */
 		if (cfsetispeed(&uart_config, speed) < 0 || cfsetospeed(&uart_config, speed) < 0) {
@@ -753,7 +776,7 @@ int Mavlink::mavlink_open_uart(int baud, const char *uart_name, bool force_flow_
 			return -1;
 		}
 
-	} else {
+	} else {  /* USB serial is indicated by /dev/ttyACM0*/
 		_is_usb_uart = true;
 
 		/* USB has no baudrate, but use a magic number for 'fast' */
@@ -816,6 +839,8 @@ Mavlink::enable_flow_control(enum FLOW_CONTROL_MODE mode)
 	return ret;
 }
 
+
+//设置hil硬件在环仿真
 int
 Mavlink::set_hil_enabled(bool hil_enabled)
 {
@@ -836,6 +861,7 @@ Mavlink::set_hil_enabled(bool hil_enabled)
 	return ret;
 }
 
+//在send_bytes发送时调用，需要查看OS的buffer够不够大了. 此处存疑,Linux的串口最大256?
 unsigned
 Mavlink::get_free_tx_buf()
 {
@@ -1653,15 +1679,20 @@ Mavlink::update_radio_status(const radio_status_s &radio_status)
 	}
 }
 
+
+//在task_main中执行一次configure_streams_to_default(),根据Mavlink模式添加默认的stream
+//在task_main中执行configure_streams_to_default(_subscribe_to_stream),这就是根据rcS中的脚本添加相应的stream
+//形参configure_single_stream是要添加的stream,也可以为空
 int
 Mavlink::configure_streams_to_default(const char *configure_single_stream)
 {
 	int ret = 0;
 	bool stream_configured = false;
 
+	//lambda函数
 	auto configure_stream_local =
 	[&stream_configured, configure_single_stream, &ret, this](const char *stream_name, float rate) {
-		if (!configure_single_stream || strcmp(configure_single_stream, stream_name) == 0) {
+		if (!configure_single_stream || strcmp(configure_single_stream, stream_name) == 0) {  //configure_single_stream可以为null:这样下面每一个case中的全部执行;也可以为某一个stream，这样下面的case就执行某一条。
 			int ret_local = configure_stream(stream_name, rate);
 
 			if (ret_local != 0) {
@@ -1850,7 +1881,7 @@ Mavlink::task_main(int argc, char *argv[])
 	_baudrate = 57600;
 	_datarate = 0;
 	_mode = MAVLINK_MODE_NORMAL;
-	bool _force_flow_control = false;
+	bool _force_flow_control = false;   //UART默认自动流量控制
 
 	_interface_name = nullptr;
 
@@ -1996,7 +2027,7 @@ Mavlink::task_main(int argc, char *argv[])
 			_forwarding_on = true;
 			break;
 
-		case 'w':   //等待发送直到接收到第一个消息
+		case 'w':   //直到接收到消息再发送
 			_wait_to_transmit = true;
 			break;
 

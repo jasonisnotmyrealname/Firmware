@@ -1,0 +1,14 @@
+# Target labels
+ sitl_gazebo
+# Source files and their labels
+/home/jason/Project/PX4/Firmware/platforms/posix/CMakeFiles/sitl_gazebo
+/home/jason/Project/PX4/Firmware/platforms/posix/CMakeFiles/sitl_gazebo.rule
+/home/jason/Project/PX4/Firmware/platforms/posix/CMakeFiles/sitl_gazebo-complete.rule
+/home/jason/Project/PX4/Firmware/external/Stamp/sitl_gazebo/sitl_gazebo-install.rule
+/home/jason/Project/PX4/Firmware/external/Stamp/sitl_gazebo/sitl_gazebo-mkdir.rule
+/home/jason/Project/PX4/Firmware/external/Stamp/sitl_gazebo/sitl_gazebo-download.rule
+/home/jason/Project/PX4/Firmware/external/Stamp/sitl_gazebo/sitl_gazebo-update.rule
+/home/jason/Project/PX4/Firmware/external/Stamp/sitl_gazebo/sitl_gazebo-patch.rule
+/home/jason/Project/PX4/Firmware/external/Stamp/sitl_gazebo/sitl_gazebo-configure.rule
+/home/jason/Project/PX4/Firmware/external/Stamp/sitl_gazebo/sitl_gazebo-build.rule
+/home/jason/Project/PX4/Firmware/external/Stamp/sitl_gazebo/sitl_gazebo-forceconfigure.rule

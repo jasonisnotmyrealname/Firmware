@@ -45,6 +45,7 @@ namespace logger
  * @class LogWriter
  * Manages starting, stopping & writing of logged data using the configured backend.
  */
+//这个类有两个重要的private变量，一个用于把log写入文件，一个用于把log消息通过mavlink发送出去
 class LogWriter
 {
 public:
@@ -100,7 +101,7 @@ public:
 	void unselect_write_backend() { select_write_backend(BackendAll); }
 
 	/* file logging methods */
-
+	// _log_writer_file是LogWriterFile类的对象，是LogWriter的Private变量，用于管理write的相关线程、以及写入等动作
 	void lock()
 	{
 		if (_log_writer_file) { _log_writer_file->lock(); }
@@ -149,6 +150,7 @@ public:
 	 * Indicate to the underlying backend whether future write_message() calls need a reliable
 	 * transfer. Needed for header integrity.
 	 */
+	// _log_writer_mavlink是一个LogWriterMavlink的对象，用于Writes logging data to uORB, and then sent via mavlink
 	void set_need_reliable_transfer(bool need_reliable)
 	{
 		if (_log_writer_file) { _log_writer_file->set_need_reliable_transfer(need_reliable); }

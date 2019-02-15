@@ -533,7 +533,7 @@ private:
 	unsigned		_main_loop_delay;	/**< mainloop delay, depends on data rate */
 
 	MavlinkOrbSubscription	*_subscriptions;
-	MavlinkStream		*_streams;
+	MavlinkStream		*_streams;    //每个mavlink对象都有一个_stream(消息)链表
 
 	MavlinkShell			*_mavlink_shell;
 	MavlinkULog			*_mavlink_ulog;
@@ -541,7 +541,7 @@ private:
 
 	MAVLINK_MODE 		_mode;
 
-	mavlink_channel_t	_channel;
+	mavlink_channel_t	_channel;    //每个Mavlink对象对应的_channel(基本和instance id一样)
 
 	ringbuffer::RingBuffer		_logbuffer;
 
@@ -550,7 +550,7 @@ private:
 	bool			_forwarding_on;
 	bool			_ftp_on;
 
-	int			_uart_fd;
+	int			_uart_fd;   //记录这个对象对应的uart fd
 
 	int			_baudrate;
 	int			_datarate;		///< data rate for normal streams (attitude, position, etc.)

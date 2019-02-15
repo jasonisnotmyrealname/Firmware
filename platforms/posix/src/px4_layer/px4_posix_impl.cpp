@@ -56,7 +56,7 @@ extern pthread_t _shell_task_id;
 
 __BEGIN_DECLS
 
-long PX4_TICKS_PER_SEC = sysconf(_SC_CLK_TCK);
+long PX4_TICKS_PER_SEC = sysconf(_SC_CLK_TCK); //获得cpu时钟的频率
 
 __END_DECLS
 

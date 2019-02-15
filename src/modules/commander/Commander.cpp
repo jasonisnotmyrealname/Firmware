@@ -1019,6 +1019,8 @@ Commander::handle_command(vehicle_status_s *status_local, const vehicle_command_
 	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_NONE:
 	case vehicle_command_s::VEHICLE_CMD_DO_ORBIT:
 		/* ignore commands that are handled by other parts of the system */
+		// 上面这些指令不用管，其他的模块会管，比如说相机的拍照指令 VEHICLE_CMD_DO_DIGICAM_CONTROL(#203)
+		PX4_INFO("other vehicle_command updated-----%d",cmd.command);  //zjx
 		break;
 
 	default:
@@ -2205,6 +2207,7 @@ Commander::run()
 
 			/* got command */
 			orb_copy(ORB_ID(vehicle_command), cmd_sub, &cmd);
+//			PX4_INFO("vechicle command updated`````````````````%d",cmd.command);   //zjx
 
 			/* handle it */
 			if (handle_command(&status, cmd, &armed, &_home, &home_pub, &command_ack_pub, &status_changed)) {

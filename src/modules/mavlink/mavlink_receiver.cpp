@@ -194,8 +194,9 @@ void MavlinkReceiver::acknowledge(uint8_t sysid, uint8_t compid, uint16_t comman
 void
 MavlinkReceiver::handle_message(mavlink_message_t *msg)
 {
+//	PX4_INFO("received mavlink message: %d---------------------",msg->msgid);  //zjx
 	switch (msg->msgid) {
-	case MAVLINK_MSG_ID_COMMAND_LONG:
+	case MAVLINK_MSG_ID_COMMAND_LONG:   //qgroundcontrol发送takeoff、trigger等指令时对应的msgid
 		handle_message_command_long(msg);
 		break;
 
@@ -211,7 +212,7 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		handle_message_optical_flow_rad(msg);
 		break;
 
-	case MAVLINK_MSG_ID_PING:
+	case MAVLINK_MSG_ID_PING:   //4
 		handle_message_ping(msg);
 		break;
 
@@ -263,7 +264,7 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		handle_message_rc_channels_override(msg);
 		break;
 
-	case MAVLINK_MSG_ID_HEARTBEAT:
+	case MAVLINK_MSG_ID_HEARTBEAT:   //0
 		handle_message_heartbeat(msg);
 		break;
 
@@ -375,7 +376,7 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 
 	/* If we've received a valid message, mark the flag indicating so.
 	   This is used in the '-w' command-line flag. */
-	_mavlink->set_has_received_messages(true);
+	_mavlink->set_has_received_messages(true);  //设置接收到了消息，可以发送了
 }
 
 bool
@@ -499,7 +500,7 @@ MavlinkReceiver::handle_message_command_int(mavlink_message_t *msg)
 {
 	/* command */
 	mavlink_command_int_t cmd_mavlink;
-	mavlink_msg_command_int_decode(msg, &cmd_mavlink);
+	mavlink_msg_command_int_decode(msg, &cmd_mavlink);   //解析mavlink消息
 
 	vehicle_command_s vcmd = {};
 	vcmd.timestamp = hrt_absolute_time();
@@ -572,6 +573,8 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 			PX4_WARN("ignoring CMD with same SYS/COMP (%d/%d) ID", mavlink_system.sysid, mavlink_system.compid);
 			return;
 		}
+		
+		PX4_INFO("cmd_mavlink.command is %d",cmd_mavlink.command);  //zjx,比如qgc上的takeoff是22（MAV_CMD_NAV_TAKEOFF）
 
 		if (cmd_mavlink.command == MAV_CMD_LOGGING_START) {
 			// check that we have enough bandwidth available: this is given by the configured logger topics
@@ -595,11 +598,12 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 		}
 
 		if (!send_ack) {
-			if (_cmd_pub == nullptr) {
-				_cmd_pub = orb_advertise_queue(ORB_ID(vehicle_command), &vehicle_command, vehicle_command_s::ORB_QUEUE_LENGTH);
-
+			if (_cmd_pub == nullptr) {   //第一次给指令执行orb_advertise（在内部也会orb_publish一次，见orb_advertise_multi）
+				_cmd_pub = orb_advertise_queue(ORB_ID(vehicle_command), &vehicle_command, vehicle_command_s::ORB_QUEUE_LENGTH);   //vehicle_command_s::ORB_QUEUE_LENGTH长度为3
+//				PX4_INFO("_cmd_pub is nullptr,orb_advertise_queue");   //zjx
 			} else {
 				orb_publish(ORB_ID(vehicle_command), _cmd_pub, &vehicle_command);
+//				PX4_INFO("orb_publish vehicle_command");   //zjx
 			}
 		}
 	}
@@ -2561,7 +2565,7 @@ MavlinkReceiver::receive_thread(void *arg)
 
 #ifdef __PX4_POSIX
 
-			if (_mavlink->get_protocol() == UDP) {
+			if (_mavlink->get_protocol() == UDP) {    //POSIX环境下是可以用UDP的
 				if (fds[0].revents & POLLIN) {
 					nread = recvfrom(_mavlink->get_socket_fd(), buf, sizeof(buf), 0, (struct sockaddr *)&srcaddr, &addrlen);
 				}
@@ -2574,8 +2578,10 @@ MavlinkReceiver::receive_thread(void *arg)
 
 			int localhost = (127 << 24) + 1;
 
-			if (!_mavlink->get_client_source_initialized()) {
+			//PX4_INFO("received mavlink message---------------------");  //zjx
 
+			if (!_mavlink->get_client_source_initialized()) {
+				
 				// set the address either if localhost or if 3 seconds have passed
 				// this ensures that a GCS running on localhost can get a hold of
 				// the system within the first N seconds
@@ -2596,7 +2602,7 @@ MavlinkReceiver::receive_thread(void *arg)
 			if (_mavlink->get_client_source_initialized()) {
 				/* if read failed, this loop won't execute */
 				for (ssize_t i = 0; i < nread; i++) {
-					if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &_status)) {
+					if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &_status)) {  //解析msg,每次只解析1Byte,直到全部解析完成后返回
 
 						/* check if we received version 2 and request a switch. */
 						if (!(_mavlink->get_status()->flags & MAVLINK_STATUS_FLAG_IN_MAVLINK1)) {
@@ -2604,11 +2610,13 @@ MavlinkReceiver::receive_thread(void *arg)
 							_mavlink->set_proto_version(2);
 						}
 
+						//把message发送给所有的handle函数
+
 						/* handle generic messages and commands */
-						handle_message(&msg);
+						handle_message(&msg);  //takeoff指令在这里
 
 						/* handle packet with mission manager */
-						_mission_manager.handle_message(&msg);
+						_mission_manager.handle_message(&msg);  //mission的一些参数在这里
 
 
 						/* handle packet with parameter component */

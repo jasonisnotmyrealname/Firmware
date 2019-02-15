@@ -6,7 +6,16 @@
 
 source px4-alias.sh
 
+param set MAV_SYS_ID $((1+px4_instance))
+
+camera_trigger start
+#param set CAM_FBACK_MODE 1
+#camera_feedback start
+
+
 uorb start
+
+load_mon start
 
 #param load
 
@@ -22,8 +31,8 @@ logger start -t -b 200
 #accelsim start
 #barosim start
 #gpssim start
-#sensors start
-#commander start
+sensors start
+commander start
 
 udp_gcs_port_local=$((14556+px4_instance))
 mavlink start -x -u $udp_gcs_port_local -r 4000000

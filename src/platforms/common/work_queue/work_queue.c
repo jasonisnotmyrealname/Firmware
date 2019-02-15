@@ -106,7 +106,7 @@
 
 int work_queue(int qid, struct work_s *work, worker_t worker, void *arg, uint32_t delay)
 {
-	struct wqueue_s *wqueue = &g_work[qid];
+	struct wqueue_s *wqueue = &g_work[qid];  //从g_work中取出一个对应的queue: HPWORK或者LPWORK
 
 	//DEBUGASSERT(work != NULL && (unsigned)qid < NWORKERS);
 
@@ -124,7 +124,7 @@ int work_queue(int qid, struct work_s *work, worker_t worker, void *arg, uint32_
 	work_lock(qid);
 	work->qtime  = clock_systimer(); /* Time work queued */
 
-	dq_addlast((dq_entry_t *)work, &wqueue->q);
+	dq_addlast((dq_entry_t *)work, &wqueue->q);   //把work加入到queue的尾巴上. dq_addlast在dq_addlast.c中
 #ifdef __PX4_QURT
 	px4_task_kill(wqueue->pid, SIGALRM);      /* Wake up the worker thread */
 #else

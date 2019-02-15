@@ -298,7 +298,7 @@ int main(int argc, char **argv)
 
 		//Driver初始化??
 		DriverFramework::Framework::initialize();
-		//?包括work_queues_init，hrt_work_queue_init，hrt_init，param_init
+		//包括work_queues_init，hrt_work_queue_init，hrt_init，param_init
 		px4::init_once();
 		//打印欢迎界面
 		px4::init(argc, argv, "px4");

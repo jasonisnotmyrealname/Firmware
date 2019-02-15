@@ -1,5 +1,6 @@
 /**
  * @file camera_interface.h
+ * 只提供了camera接口这个基类，其他新添加的相机在此基础上继承，比如CameraInterfaceSeagull
  */
 
 #pragma once

@@ -167,8 +167,8 @@ using ::isfinite;
 /* FIXME - Used to satisfy build */
 #define getreg32(a)    (*(volatile uint32_t *)(a))
 
-#define USEC_PER_TICK (1000000/PX4_TICKS_PER_SEC)
-#define USEC2TICK(x) (((x)+(USEC_PER_TICK/2))/USEC_PER_TICK)
+#define USEC_PER_TICK (1000000/PX4_TICKS_PER_SEC)     //PX4_TICKS_PER_SEC为系统频率，USEC_PER_TICK为每周期对应的us
+#define USEC2TICK(x) (((x)+(USEC_PER_TICK/2))/USEC_PER_TICK)   //把us转为周期数量
 
 #ifdef __PX4_QURT
 

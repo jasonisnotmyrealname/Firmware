@@ -178,6 +178,7 @@ int LogWriterFile::thread_start()
 
 	pthread_attr_setstacksize(&thr_attr, PX4_STACK_ADJUSTED(1150));
 
+	//创建线程，但执行的是this指针的run
 	int ret = pthread_create(&_thread, &thr_attr, &LogWriterFile::run_helper, this);
 	pthread_attr_destroy(&thr_attr);
 

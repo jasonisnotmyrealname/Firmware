@@ -9,13 +9,13 @@ set(config_module_list
 #	drivers/telemetry
 
 #	drivers/batt_smbus
-#	drivers/camera_trigger
+	drivers/camera_trigger
 #	drivers/gps
 #	drivers/linux_gpio
 #	drivers/pwm_out_sim
 #	drivers/vmount
 
-#	modules/sensors  #依赖airspeed/battery/conversion/drivers__device/git_ecl/ecl_validation/mathlib
+	modules/sensors  #依赖airspeed/battery/conversion/drivers__device/git_ecl/ecl_validation/mathlib
 
 #	platforms/posix/drivers/tonealrmsim
 
@@ -31,14 +31,14 @@ set(config_module_list
 #	systemcmds/motor_ramp
 	#systemcmds/mtd
 	#systemcmds/nshterm
-#	systemcmds/param
+	systemcmds/param
 #	systemcmds/perf
 #	systemcmds/pwm
-#	systemcmds/reboot
-#	systemcmds/shutdown
+	systemcmds/reboot
+	systemcmds/shutdown
 #	systemcmds/sd_bench
-#	systemcmds/top
-#	systemcmds/topic_listener
+	systemcmds/top
+	systemcmds/topic_listener
 #	systemcmds/tune_control
 #	systemcmds/ver
 
@@ -61,12 +61,12 @@ set(config_module_list
 	#
 	# General system control
 	#
-#	modules/camera_feedback
-#	modules/commander   #DEPENDS circuit_breaker/df_driver_framework/git_ecl/ecl_geo.依赖于sensors
+	modules/camera_feedback
+	modules/commander   #DEPENDS circuit_breaker/df_driver_framework/git_ecl/ecl_geo.依赖于sensors
 #	modules/events
 	#modules/gpio_led
 #	modules/land_detector
-#	modules/load_mon
+#	modules/load_mon   #监控cpu load，目前只有在nuttx下才有效，posix实际并没有监控,在_compute就return了
 	modules/mavlink   #依赖dataman/commander/sensors. Mavlink也是一个单独维护的仓库
 #	modules/navigator    #依赖git_ecl/ecl_geo/landing_slope
 #	modules/replay

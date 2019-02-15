@@ -222,6 +222,7 @@ orb_advert_t uORB::Manager::orb_advertise_multi(const struct orb_metadata *meta,
 #endif /* ORB_COMMUNICATOR */
 
 	/* the advertiser must perform an initial publish to initialise the object */
+	// advertise也要orb_publish一次
 	result = orb_publish(meta, advertiser, data);
 
 	if (result == PX4_ERROR) {

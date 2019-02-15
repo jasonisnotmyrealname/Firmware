@@ -47,7 +47,7 @@
 #include <string.h>
 #include <stdio.h>
 
-static struct sq_queue_s	callout_queue;
+static struct sq_queue_s	callout_queue;   //callout函数的队列
 
 /* latency histogram */
 #define LATENCY_BUCKET_COUNT 8
@@ -61,7 +61,7 @@ static void		hrt_call_reschedule(void);
 #define HRT_INTERVAL_MIN	50
 #define HRT_INTERVAL_MAX	50000
 
-static sem_t 	_hrt_lock;
+static sem_t 	_hrt_lock;  //一个hrt的信号量
 static struct work_s	_hrt_work;
 
 #define CLOCK_REALTIME 0
@@ -70,6 +70,7 @@ static struct work_s	_hrt_work;
 #define CLOCK_MONOTONIC 1
 #endif
 
+//获得时间信息，分辨率为ns
 int px4_clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
 	struct timeval now;
@@ -111,13 +112,14 @@ static void hrt_unlock(void)
 hrt_abstime hrt_absolute_time(void)
 {
 	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
+	clock_gettime(CLOCK_MONOTONIC, &ts);  //获得ns分辨率的时间信息，CLOCK_MONOTONIC:从系统启动这一刻起开始计时,不受系统时间被用户改变的影响  
 	return ts_to_abstime(&ts);
 }
 
 /*
  * Convert a timespec to absolute time.
  */
+// 返回单位为微秒的时间
 hrt_abstime ts_to_abstime(struct timespec *ts)
 {
 	hrt_abstime	result;
@@ -135,6 +137,7 @@ hrt_abstime ts_to_abstime(struct timespec *ts)
  * This function is safe to use even if the timestamp is updated
  * by an interrupt during execution.
  */
+// 计算当前时间与then的时间差
 hrt_abstime hrt_elapsed_time(const volatile hrt_abstime *then)
 {
 	hrt_abstime delta = hrt_absolute_time() - *then;
@@ -146,6 +149,7 @@ hrt_abstime hrt_elapsed_time(const volatile hrt_abstime *then)
  *
  * This function ensures that the timestamp cannot be seen half-written by an interrupt handler.
  */
+// 存下当前时间
 hrt_abstime hrt_store_absolute_time(volatile hrt_abstime *now)
 {
 	hrt_abstime ts = hrt_absolute_time();
@@ -159,6 +163,7 @@ hrt_abstime hrt_store_absolute_time(volatile hrt_abstime *now)
  *
  * Always returns false for repeating callouts.
  */
+// 检查call是否被调用过
 bool	hrt_called(struct hrt_call *entry)
 {
 	return (entry->deadline == 0);
@@ -204,6 +209,7 @@ void	hrt_call_delay(struct hrt_call *entry, hrt_abstime delay)
 /*
  * Initialise the HRT.
  */
+// 初始化hrt队列、信号量
 void	hrt_init(void)
 {
 	//printf("hrt_init\n");

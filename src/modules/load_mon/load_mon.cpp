@@ -165,6 +165,7 @@ int LoadMon::task_spawn(int argc, char *argv[])
 	}
 
 	/* Schedule a cycle to start things. */
+	// 怎么做到定时的，大概是以1s作为周期.   zjx
 	int ret = work_queue(LPWORK, &obj->_work, (worker_t)&LoadMon::cycle_trampoline, obj, 0);
 
 	if (ret < 0) {
@@ -187,6 +188,7 @@ LoadMon::cycle_trampoline(void *arg)
 
 void LoadMon::_cycle()
 {
+//	PX4_INFO("LoadMon::_cycle is running");   //zjx
 	_compute();
 
 	if (!should_exit()) {
@@ -203,6 +205,7 @@ void LoadMon::_compute()
 	if (_last_idle_time == 0) {
 		/* Just get the time in the first iteration */
 		_last_idle_time = system_load.tasks[0].total_runtime;
+		PX4_INFO("_last_idle_time = 0, _compute return");  //zjx
 		return;
 	}
 
@@ -224,9 +227,10 @@ void LoadMon::_compute()
 
 	if (_cpuload_pub == nullptr) {
 		_cpuload_pub = orb_advertise(ORB_ID(cpuload), &_cpuload);
-
+		PX4_INFO("cpu load orb_advertise");  //zjx
 	} else {
 		orb_publish(ORB_ID(cpuload), _cpuload_pub, &_cpuload);
+		PX4_INFO("cpu load orb_publish");  //zjx
 	}
 }
 

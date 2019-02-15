@@ -1,0 +1,2 @@
+/usr/bin/ar qc libFlightTaskManualStabilized.a  CMakeFiles/FlightTaskManualStabilized.dir/FlightTaskManualStabilized.cpp.o
+/usr/bin/ranlib libFlightTaskManualStabilized.a
