@@ -901,6 +901,8 @@ Mavlink::get_free_tx_buf()
 	return buf_free;
 }
 
+
+//被mavlink_start_uart_send调用，在发送数据前必须lock
 void
 Mavlink::begin_send()
 {
@@ -909,6 +911,8 @@ Mavlink::begin_send()
 	pthread_mutex_lock(&_send_mutex);
 }
 
+
+//被mavlink_end_uart_send调用，存疑，不清楚这个函数的作用
 int
 Mavlink::send_packet()
 {
@@ -965,6 +969,7 @@ Mavlink::send_packet()
 	return ret;
 }
 
+//被mavlink_send_uart_bytes调用
 void
 Mavlink::send_bytes(const uint8_t *buf, unsigned packet_len)
 {
@@ -980,6 +985,7 @@ Mavlink::send_bytes(const uint8_t *buf, unsigned packet_len)
 		_mavlink_start_time = _last_write_try_time;
 	}
 
+	//如果port是UART，需要看OS的buffer够不够用
 	if (get_protocol() == SERIAL) {
 		/* check if there is space in the buffer, let it overflow else */
 		unsigned buf_free = get_free_tx_buf();
@@ -1000,7 +1006,7 @@ Mavlink::send_bytes(const uint8_t *buf, unsigned packet_len)
 
 #ifdef __PX4_POSIX
 
-	else {
+	else {  //TCP或者UDP
 		if (_network_buf_len + packet_len < sizeof(_network_buf) / sizeof(_network_buf[0])) {
 			memcpy(&_network_buf[_network_buf_len], buf, packet_len);
 			_network_buf_len += packet_len;
@@ -1011,8 +1017,8 @@ Mavlink::send_bytes(const uint8_t *buf, unsigned packet_len)
 
 #endif
 
-	if (ret != (size_t) packet_len) {
-		count_txerrbytes(packet_len);
+	if (ret != (size_t) packet_len) {   //发出的数据不对
+		count_txerrbytes(packet_len);   //用于统计
 
 	} else {
 		_last_write_success_time = _last_write_try_time;
@@ -1020,6 +1026,8 @@ Mavlink::send_bytes(const uint8_t *buf, unsigned packet_len)
 	}
 }
 
+
+//UDP用
 void
 Mavlink::find_broadcast_address()
 {
@@ -1211,6 +1219,8 @@ Mavlink::init_udp()
 #endif
 }
 
+
+//被mavlink receiver调用
 void
 Mavlink::handle_message(const mavlink_message_t *msg)
 {
@@ -1224,12 +1234,15 @@ Mavlink::handle_message(const mavlink_message_t *msg)
 	}
 }
 
+
+//把_mavlink_log_pub通过uorb发布出去
 void
 Mavlink::send_statustext_info(const char *string)
 {
 	mavlink_log_info(&_mavlink_log_pub, string);
 }
 
+//和上面一样，多了一个PX4_WARN
 void
 Mavlink::send_statustext_critical(const char *string)
 {
@@ -1237,12 +1250,15 @@ Mavlink::send_statustext_critical(const char *string)
 	PX4_ERR(string);
 }
 
+//和上面一样，多了一个PX4_ERR
 void
 Mavlink::send_statustext_emergency(const char *string)
 {
 	mavlink_log_emergency(&_mavlink_log_pub, string);
 }
 
+
+//在task_main时执行一次;或者收到地面站的MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES执行
 void Mavlink::send_autopilot_capabilites()
 {
 	struct vehicle_status_s status;
@@ -1298,6 +1314,8 @@ void Mavlink::send_autopilot_capabilites()
 	}
 }
 
+
+//在mavlink receiver中调用，收到MAV_CMD_REQUEST_PROTOCOL_VERSION时调用
 void Mavlink::send_protocol_version()
 {
 	mavlink_protocol_version_t msg = {};
@@ -1319,6 +1337,8 @@ void Mavlink::send_protocol_version()
 	set_proto_version(curr_proto_ver);
 }
 
+
+//add_orb_subscription指的是Mavlink instance订阅的uorb topic。 这里的instance有什么用?
 MavlinkOrbSubscription *Mavlink::add_orb_subscription(const orb_id_t topic, int instance, bool disable_sharing)
 {
 	if (!disable_sharing) {
@@ -1332,7 +1352,7 @@ MavlinkOrbSubscription *Mavlink::add_orb_subscription(const orb_id_t topic, int 
 	*/
 		LL_FOREACH(_subscriptions, sub) {
 			if (sub->get_topic() == topic && sub->get_instance() == instance) {
-				/* already subscribed */
+				/* already subscribed */  //在这个mavlink对象的_subscriptions链表中查到了这个订阅信息. 
 				return sub;
 			}
 		}
@@ -1346,7 +1366,7 @@ MavlinkOrbSubscription *Mavlink::add_orb_subscription(const orb_id_t topic, int 
 	return sub_new;
 }
 
-
+//configure_stream向Mavlink的对象添加一个stream
 //这里的stream_name可能是“HEATBEAT”等common.xml中定义的mavlink message
 int
 Mavlink::configure_stream(const char *stream_name, const float rate)
@@ -1360,8 +1380,9 @@ Mavlink::configure_stream(const char *stream_name, const float rate)
 		interval = (1000000.0f / rate);
 
 	} else if (rate < 0.0f) {
-		interval = -1;
+		interval = -1;    //-1怎么设置
 	}
+	//如果rate在[0.0f,0.000001f]范围内,interval还是0,等于取消这个stream
 
 	/* search if stream exists */
 	// 在_streams中查找stream_name，如果找到，则set_interval（新的）;_streams初始化为nullptr
@@ -1369,11 +1390,9 @@ Mavlink::configure_stream(const char *stream_name, const float rate)
 	LL_FOREACH(_streams, stream) {
 		if (strcmp(stream_name, stream->get_name()) == 0) {   //找到了该stream
 			if (interval != 0) {
-				/* set new interval */
-				stream->set_interval(interval);  
-			} else {    //如果interval是0,就表示删除这个stream
-				/* delete stream */
-				LL_DELETE(_streams, stream);
+				stream->set_interval(interval);   //更新interval
+			} else {    
+				LL_DELETE(_streams, stream);  //如果interval是0,就表示删除这个stream
 				delete stream;
 			}
 			return OK;
@@ -1388,7 +1407,7 @@ Mavlink::configure_stream(const char *stream_name, const float rate)
 
 	// search for stream with specified name in supported streams list
 	// create new instance if found(应该是not found)
-	// 如果stream_name不在_streams中，就创建一个MavlinkStream类，把this指向的对象作为instance
+	// 如果stream_name不在_streams中，就创建一个MavlinkStream类，把this指向的对象作为instance,create_mavlink_stream要检查stream_name是不是预定义的
 	stream = create_mavlink_stream(stream_name, this);
 
 	// 将新创建的stream追加到_streams上
@@ -1405,6 +1424,8 @@ Mavlink::configure_stream(const char *stream_name, const float rate)
 	return PX4_ERROR;
 }
 
+
+//在stream_command()中被调用,stream_command被mavlink stream脚本指令调用. 因此configure_stream_threadsafe和configure_stream的区别就是前者是mavlink启动后使用的，线程安全?
 void
 Mavlink::configure_stream_threadsafe(const char *stream_name, const float rate)
 {
@@ -1417,7 +1438,7 @@ Mavlink::configure_stream_threadsafe(const char *stream_name, const float rate)
 			usleep(MAIN_LOOP_DELAY / 2);
 		}
 
-		/* copy stream name */
+		/* copy stream name */  //为什么不stream_name直接拷贝给_subscribe_to_stream
 		unsigned n = strlen(stream_name) + 1;
 		char *s = new char[n];
 		strcpy(s, stream_name);
@@ -1435,6 +1456,8 @@ Mavlink::configure_stream_threadsafe(const char *stream_name, const float rate)
 	}
 }
 
+
+//在_forwarding_on时有用
 int
 Mavlink::message_buffer_init(int size)
 {
@@ -1457,6 +1480,8 @@ Mavlink::message_buffer_init(int size)
 	return ret;
 }
 
+
+//_forwarding_on有效时有用
 void
 Mavlink::message_buffer_destroy()
 {
@@ -1466,6 +1491,8 @@ Mavlink::message_buffer_destroy()
 	free(_message_buffer.data);
 }
 
+
+//_forwarding_on有效时有用
 int
 Mavlink::message_buffer_count()
 {
@@ -1478,13 +1505,15 @@ Mavlink::message_buffer_count()
 	return n;
 }
 
+
+//_forwarding_on有效时有用
 int
 Mavlink::message_buffer_is_empty()
 {
 	return _message_buffer.read_ptr == _message_buffer.write_ptr;
 }
 
-
+//_forwarding_on有效时有用
 bool
 Mavlink::message_buffer_write(const void *ptr, int size)
 {
@@ -1519,6 +1548,8 @@ Mavlink::message_buffer_write(const void *ptr, int size)
 	return true;
 }
 
+
+//_forwarding_on有效时有用
 int
 Mavlink::message_buffer_get_ptr(void **ptr, bool *is_part)
 {
@@ -1546,12 +1577,15 @@ Mavlink::message_buffer_get_ptr(void **ptr, bool *is_part)
 	return n;
 }
 
+
+//_forwarding_on有效时有用
 void
 Mavlink::message_buffer_mark_read(int n)
 {
 	_message_buffer.read_ptr = (_message_buffer.read_ptr + n) % _message_buffer.size;
 }
 
+//_forwarding_on有效时有用
 void
 Mavlink::pass_message(const mavlink_message_t *msg)
 {
@@ -1564,6 +1598,8 @@ Mavlink::pass_message(const mavlink_message_t *msg)
 	}
 }
 
+
+//在mavlink receiver执行handle_message_serial_control时调用，目前只有在NUTTX下有用
 MavlinkShell *
 Mavlink::get_shell()
 {
@@ -1596,6 +1632,8 @@ Mavlink::close_shell()
 	}
 }
 
+
+//在task_main的while中被调用
 void
 Mavlink::update_rate_mult()
 {
@@ -1603,6 +1641,7 @@ Mavlink::update_rate_mult()
 	float rate = 0.0f;
 
 	/* scale down rates if their theoretical bandwidth is exceeding the link bandwidth */
+	//统计所有stream的频率，如果超过link带宽了就要让它们自动降速
 	MavlinkStream *stream;
 	LL_FOREACH(_streams, stream) {
 		if (stream->const_rate()) {
@@ -1655,6 +1694,8 @@ Mavlink::update_rate_mult()
 	_rate_mult = math::constrain(_rate_mult, 0.05f, 1.0f);
 }
 
+
+//被MavlinkReceiver::handle_message_radio_status调用
 void
 Mavlink::update_radio_status(const radio_status_s &radio_status)
 {
@@ -2117,7 +2158,7 @@ Mavlink::task_main(int argc, char *argv[])
 		pthread_mutex_init(&_message_buffer_mutex, nullptr);
 	}
 
-	//在对象的_subscription增加topic节点，返回节点
+	//在该对象的_subscription链表中增加topic节点，返回节点
 	// vehicle_command由mavlink_receiver、navigator等发布
 	MavlinkOrbSubscription *cmd_sub = add_orb_subscription(ORB_ID(vehicle_command), 0, true);  //最后一个参数是disable_sharing,默认是false（就是share该topic)
 	// parameter_update由谁发布?accelerometer_calibration、gyro_calibration、mag_calibration、temperature_calibration
@@ -2201,6 +2242,7 @@ Mavlink::task_main(int argc, char *argv[])
 	/* start the MAVLink receiver last to avoid a race */
 	// 开始接收，启动一个 MavlinkReceiver::receive_thread 子线程（task_main本身也是一个线程），用于从UART接收数据
 	// this携带了本对象的所有的信息，包括_uart_fd等，是receive_thread的父线程
+	// 每一个mavlink线程都要启动一个receiver线程
 	MavlinkReceiver::receive_start(&_receive_thread, this);
 
 	while (!_task_should_exit) {
@@ -2219,8 +2261,9 @@ Mavlink::task_main(int argc, char *argv[])
 
 		check_radio_config();   //查看radio的设置(设备fd是_uart_fd，在前面已经打开)
 
-		//更新vehicle_status，这个更新周期也需要由_main_loop_delay来控制
-		if (status_sub->update(&status_time, &status)) {
+		//更新vehicle_status、由Commander发布，这个更新周期也需要由_main_loop_delay来控制
+		//主要据此来更新:1.要不要执行hil;2.要不要设定rc_input
+		if (status_sub->update(&status_time, &status)) {  
 			/* switch HIL mode if required */
 			set_hil_enabled(status.hil_state == vehicle_status_s::HIL_STATE_ON);
 
@@ -2286,6 +2329,7 @@ Mavlink::task_main(int argc, char *argv[])
 		}
 
 		/* send command ACK */
+		//发送ACK
 		uint16_t current_command_ack = 0;
 		struct vehicle_command_ack_s command_ack;
 
@@ -2308,15 +2352,14 @@ Mavlink::task_main(int argc, char *argv[])
 			}
 		}
 
-		struct mavlink_log_s mavlink_log;
-
 		//更新mavlink_log(去向?)
+		struct mavlink_log_s mavlink_log;
 		if (mavlink_log_sub->update_if_changed(&mavlink_log)) {
 			_logbuffer.put(&mavlink_log);   //_logbuffer是一个RingBuffer
 		}
 
 		/* check for shell output */ 
-		//zjx::???
+		// _mavlink_shell只对NUTTX有用
 		if (_mavlink_shell && _mavlink_shell->available() > 0) {
 			if (get_free_tx_buf() >= MAVLINK_MSG_ID_SERIAL_CONTROL_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES) {
 				mavlink_serial_control_t msg;
@@ -2356,10 +2399,10 @@ Mavlink::task_main(int argc, char *argv[])
 		}
 
 		/* check for requested subscriptions */
-		// _subscribe_to_stream用于在configure_stream_threadsafe和本函数之间同步
+		// _subscribe_to_stream用于在configure_stream_threadsafe(脚本中的mavlink stream)和本函数之间同步
 		// 在执行mavlink stream指令后，会把-s后面跟着的stream_name复制到_subscribe_to_stream，满足下面的if条件
 		if (_subscribe_to_stream != nullptr) {
-			if (_subscribe_to_stream_rate < -1.5f) {   //zjx ??
+			if (_subscribe_to_stream_rate < -1.5f) {   //zjx ??  _subscribe_to_stream_rate为-1.5f时用configure_streams_to_default，此时rate为默认值
 				if (configure_streams_to_default(_subscribe_to_stream) == 0) {
 					if (get_protocol() == SERIAL) {
 						PX4_DEBUG("stream %s on device %s set to default rate", _subscribe_to_stream, _device_name);
@@ -2383,7 +2426,7 @@ Mavlink::task_main(int argc, char *argv[])
 							  (double)_subscribe_to_stream_rate);
 					}
 
-				} else {
+				} else {    //速率太慢了，认为是0
 					if (get_protocol() == SERIAL) {
 						PX4_DEBUG("stream %s on device %s disabled", _subscribe_to_stream, _device_name);
 
@@ -2405,14 +2448,10 @@ Mavlink::task_main(int argc, char *argv[])
 		}
 
 		/* update streams */
-		// 对_streams列表中的每个stream都更新.
-		// 这里的更新就包括了send stream message
+		// 对_streams列表中的每个stream都更新, 这里的更新就包括了发送各个stream的Tx message.update()见mavlink_stream.cpp，send见mavlink_messages.cpp
 		MavlinkStream *stream;
-		// std::cout << "" <<std::endl;   //zjx
 		LL_FOREACH(_streams, stream) {
-			stream->update(t);   //t是时间
-//			std::cout << stream->get_name() << std::endl;  //zjx
-
+			stream->update(t);   //t是while开始记录的hard real time时间
 			if (!_first_heartbeat_sent) {
 				if (_mode == MAVLINK_MODE_IRIDIUM) {
 					if (stream->get_id() == MAVLINK_MSG_ID_HIGH_LATENCY2) {
